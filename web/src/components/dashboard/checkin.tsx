@@ -270,6 +270,11 @@ export function CheckIn({ name, checkedIn, onSuccess }: Props) {
                       · {result.artifact.rarity_name}
                     </div>
                   )}
+                  {result.freeze_used && (
+                    <div className="mt-3 rounded-xl border border-sky-500/50 bg-sky-500/10 px-4 py-2 text-sm text-sky-300">
+                      🛡️ Ngọc Bảo Vệ Đạo Tâm đã kích hoạt — chuỗi không bị gãy!
+                    </div>
+                  )}
                   {result.boss_slain && (
                     <div className="mt-3 rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-2 text-sm text-red-300">
                       🏅 <strong>Ma Thú đã bị hạ!</strong>

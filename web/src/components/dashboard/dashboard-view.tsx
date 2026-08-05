@@ -154,6 +154,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
             streak={cultivator?.streak ?? 0}
             bestStreak={cultivator?.best_streak ?? 0}
             energy={cultivator?.energy ?? Math.min(100, 30 + (cultivator?.streak ?? 0) * 2)}
+            freezeGems={cultivator?.freeze_gems ?? 0}
             avatarUrl={cultivator?.avatar_url ?? avatarUrl}
           />
           <DaoTreeCard paths={paths} />

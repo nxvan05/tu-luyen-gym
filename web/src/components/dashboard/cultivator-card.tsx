@@ -14,6 +14,7 @@ interface Props {
   streak: number;
   bestStreak: number;
   energy: number;
+  freezeGems: number;
   avatarUrl: string | null;
 }
 
@@ -26,6 +27,7 @@ export function CultivatorCard({
   streak,
   bestStreak,
   energy,
+  freezeGems,
   avatarUrl: avatar,
 }: Props) {
   const expPercent = Math.round((exp / expToNext) * 100);
@@ -97,6 +99,15 @@ export function CultivatorCard({
             </p>
           </div>
         </div>
+
+        {freezeGems > 0 && (
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-300">
+            🛡️ Ngọc Bảo Vệ Đạo Tâm ×{freezeGems}
+            <span className="text-muted-foreground">
+              — mỗi 7 ngày kỷ lục nhận 1 viên, quên 1 ngày chuỗi không gãy
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -50,6 +50,7 @@ export interface CultivatorData {
   best_streak: number;
   checked_in_today: boolean;
   energy?: number;
+  freeze_gems?: number;
   last_checkin_date: string | null;
 }
 
@@ -136,6 +137,7 @@ export interface CheckinResult {
     effect: string;
   } | null;
   boss_slain?: { defeated: boolean; rank: number | null; reward: number } | null;
+  freeze_used?: boolean;
 }
 
 export interface HistoryActivity {

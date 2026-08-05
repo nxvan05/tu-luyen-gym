@@ -320,6 +320,22 @@ def path_level_and_rest(exp: int) -> tuple[int, int]:
     return level, rest
 
 
+def _freeze_gems(cultivator: dict) -> int:
+    """Số Ngọc Bảo Vệ: mỗi 7 ngày kỷ lục được 1 viên, trừ số đã dùng."""
+    grants = cultivator.get("best_streak", 0) // 7
+    try:
+        used = len(
+            db.select(
+                "freeze_uses",
+                cultivator_id=f"eq.{cultivator['id']}",
+                select="id",
+            )
+        )
+    except Exception:
+        used = 0
+    return max(0, grants - used)
+
+
 def _apply_streak(cultivator: dict, today: date) -> tuple[int, int]:
     last = cultivator.get("last_checkin_date")
     if last is None:
@@ -333,6 +349,19 @@ def _apply_streak(cultivator: dict, today: date) -> tuple[int, int]:
         else:
             streak = 1
     return streak, max(streak, cultivator["best_streak"])
+
+
+def _streak_with_freeze(cultivator: dict, today: date) -> tuple[int, int, bool]:
+    """Tính streak; nếu chuỗi lẽ ra gãy mà còn Ngọc Bảo Vệ thì giữ chuỗi."""
+    streak, best = _apply_streak(cultivator, today)
+    if streak > 1:
+        return streak, best, False
+    if streak == 1 and not cultivator.get("last_checkin_date"):
+        return 1, best, False
+    # lẽ ra gãy (gap > 1 ngày) — thử dùng Ngọc
+    if _freeze_gems(cultivator) > 0:
+        return cultivator["streak"] + 1, max(cultivator["streak"] + 1, best), True
+    return streak, best, False
 
 
 def _roll_artifact(cultivator_id: str) -> dict | None:
@@ -509,7 +538,7 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
     photo_url = _handle_photo(req, cultivator)
 
     gained = WORKOUT_EXP[req.workout_type]
-    streak, best_streak = _apply_streak(cultivator, today)
+    streak, best_streak, freeze_used = _streak_with_freeze(cultivator, today)
     leveled = _apply_exp(cultivator, gained)
 
     record = db.insert(
@@ -533,6 +562,15 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
         },
         id=f"eq.{cultivator['id']}",
     )
+
+    if freeze_used:
+        try:
+            db.insert(
+                "freeze_uses",
+                {"cultivator_id": cultivator["id"], "used_on": today.isoformat()},
+            )
+        except Exception as e:
+            print(f"[Freeze] insert failed: {e}")
 
     cultivator.update({**leveled, "streak": streak, "best_streak": best_streak})
 
@@ -583,6 +621,7 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
         "realm": realm_result,
         "artifact": artifact,
         "boss_slain": slain,
+        "freeze_used": freeze_used,
     }
 
 
@@ -1197,6 +1236,7 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
             "exp_to_next": exp_to_next(cultivator["level"]),
             "checked_in_today": bool(today_checkins),
             "energy": energy,
+            "freeze_gems": _freeze_gems(cultivator),
         },
         "realm": realm_payload,
         "artifacts": [
