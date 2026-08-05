@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Swords } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,18 +37,27 @@ const MOODS = [
   { min: 0, emoji: "💀", label: "Sắp Bị Hạ" },
 ];
 
-function timeLeft(endsAt?: string | null): string {
+function timeLeft(endsAt?: string | null, now?: number): string {
   if (!endsAt) return "4 ngày 6 giờ";
   const end = new Date(endsAt).getTime();
   if (Number.isNaN(end)) return "4 ngày 6 giờ";
-  const diff = end - Date.now();
+  const diff = end - (now ?? Date.now());
   if (diff <= 0) return "Đã kết thúc — Boss mới đang đến";
   const days = Math.floor(diff / 86_400_000);
   const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+  if (days === 0 && hours === 0) return `Còn ${minutes} phút`;
   return `Còn ${days} ngày ${hours} giờ`;
 }
 
 export function BossCard({ boss }: { boss: BossView }) {
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
   const hpPercent = boss.maxHp > 0 ? Math.round((boss.hp / boss.maxHp) * 100) : 0;
   const mood = MOODS.find((m) => hpPercent >= m.min) ?? MOODS[2];
   const serverPercent = boss.maxHp > 0 ? Math.round(((boss.serverDamage ?? 0) / boss.maxHp) * 100) : 0;
@@ -72,7 +84,7 @@ export function BossCard({ boss }: { boss: BossView }) {
               <h3 className="font-semibold">
                 {boss.name} · Lv {level}
               </h3>
-              <p className="text-xs text-muted-foreground">{timeLeft(boss.endsAt)}</p>
+              <p className="text-xs text-muted-foreground">{timeLeft(boss.endsAt, nowTick)}</p>
             </div>
           </div>
           <Badge

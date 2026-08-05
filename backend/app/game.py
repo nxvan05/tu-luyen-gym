@@ -1267,6 +1267,35 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
         for c in db.select("checkins", cultivator_id=f"eq.{cultivator['id']}")
         if _parse_date(c["checked_in_date"]) == today
     }
+
+    # 7 ngày gần nhất cho lưới tu luyện trên Động Phủ
+    week_days: list[dict] = []
+    try:
+        week_rows = db.select(
+            "checkins",
+            cultivator_id=f"eq.{cultivator['id']}",
+            checked_in_date=f"gte.{(today - timedelta(days=6)).isoformat()}",
+            select="checked_in_date,workout_type",
+        )
+        week_by_date: dict[str, list[str]] = defaultdict(list)
+        for c in week_rows:
+            week_by_date[str(c["checked_in_date"])].append(
+                ACTIVITY_META.get(c["workout_type"], {}).get("emoji", "⚡")
+            )
+        for offset in range(6, -1, -1):
+            day = today - timedelta(days=offset)
+            iso = day.isoformat()
+            emojis = week_by_date.get(iso, [])
+            week_days.append(
+                {
+                    "date": iso,
+                    "label": "Hôm nay" if offset == 0 else ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][day.weekday()],
+                    "count": len(emojis),
+                    "emojis": emojis[:4],
+                }
+            )
+    except Exception:
+        week_days = []
     my_damage_rows = db.select(
         "boss_damage",
         cultivator_id=f"eq.{cultivator['id']}",
@@ -1370,6 +1399,7 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
             "freeze_gems": _freeze_gems(cultivator),
         },
         "realm": realm_payload,
+        "week_days": week_days,
         "artifacts": [
             {
                 "id": a["id"],

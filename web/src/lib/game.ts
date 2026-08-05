@@ -155,6 +155,7 @@ export interface DashboardData {
   journal: JournalEntry[];
   realm: RealmData | null;
   artifacts: ArtifactData[];
+  week_days?: WeekDay[];
 }
 
 export interface CheckinResult {

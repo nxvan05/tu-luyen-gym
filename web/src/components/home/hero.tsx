@@ -6,6 +6,7 @@ import { Flame, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CountUp } from "@/components/count-up";
+import { LiveStats } from "@/components/home/live-stats";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -187,6 +188,8 @@ export function Hero() {
           </div>
         </motion.div>
       </div>
+
+      <LiveStats />
     </section>
   );
 }

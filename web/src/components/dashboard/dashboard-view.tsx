@@ -15,6 +15,7 @@ import { ReadingCard } from "@/components/dashboard/reading-card";
 import { SecretRealmCard } from "@/components/dashboard/secret-realm-card";
 import { ArtifactsCard } from "@/components/dashboard/artifacts-card";
 import { RealmScene } from "@/components/dashboard/realm-scene";
+import { TimeMarkers } from "@/components/dashboard/time-markers";
 import { CheckIn } from "@/components/dashboard/checkin";
 import { realmAt, realmStage, type DashboardData } from "@/lib/game";
 
@@ -40,6 +41,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
   });
   const [live, setLive] = useState<DashboardData | null>(initData);
   const [error, setError] = useState<string | null>(null);
+  const [celebrate, setCelebrate] = useState(0);
 
   async function refreshData() {
     const res = await fetchWithRetry("/api/dashboard");
@@ -113,7 +115,17 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
         checkedInToday={cultivator?.checked_in_today ?? false}
         lastCheckinDate={cultivator?.last_checkin_date ?? null}
         name={displayName}
+        level={cultivator?.level ?? 1}
+        celebrate={celebrate}
       />
+
+      <div className="mt-4">
+        <TimeMarkers
+          streak={cultivator?.streak ?? 0}
+          checkedInToday={cultivator?.checked_in_today ?? false}
+          weekDays={live?.week_days ?? []}
+        />
+      </div>
 
       <div className="mb-6 mt-6 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -133,6 +145,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
           name={displayName}
           checkedIn={cultivator?.checked_in_today ?? false}
           onSuccess={() => {
+            setCelebrate((c) => c + 1);
             void refreshData();
           }}
         />

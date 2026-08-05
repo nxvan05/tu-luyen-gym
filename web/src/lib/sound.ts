@@ -81,3 +81,76 @@ export function haptic(ms = 25) {
     /* bỏ qua */
   }
 }
+
+/* ---------- Nhạc nền Động Phủ (tiếng gió WebAudio, không cần file) ---------- */
+let ambientNodes: { gain: GainNode } | null = null;
+let ambientOn = false;
+
+function ensureAmbient(): GainNode | null {
+  const ac = ensureCtx();
+  if (!ac) return null;
+  if (ambientNodes) return ambientNodes.gain;
+  const bufferSize = 2 * ac.sampleRate;
+  const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+  const data = buffer.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < bufferSize; i++) {
+    const white = Math.random() * 2 - 1;
+    last = (last + 0.02 * white) / 1.02;
+    data[i] = last * 3.2;
+  }
+  const src = ac.createBufferSource();
+  src.buffer = buffer;
+  src.loop = true;
+  const filter = ac.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 420;
+  const gain = ac.createGain();
+  gain.gain.value = 0;
+  src.connect(filter);
+  filter.connect(gain);
+  gain.connect(ac.destination);
+  src.start();
+  ambientNodes = { gain };
+  return gain;
+}
+
+/** Bật tiếng gió nền — dừng âm thanh khác không bị ảnh hưởng. */
+export function playAmbient() {
+  try {
+    const gain = ensureAmbient();
+    if (!gain) return;
+    ambientOn = true;
+    gain.gain.cancelScheduledValues(acTime());
+    gain.gain.setValueAtTime(gain.gain.value, acTime());
+    gain.gain.linearRampToValueAtTime(0.045, acTime() + 1.6);
+  } catch {
+    /* bỏ qua */
+  }
+}
+
+/** Tắt nhạc nền. */
+export function stopAmbient() {
+  try {
+    if (!ambientNodes) return;
+    ambientOn = false;
+    const gain = ambientNodes.gain;
+    gain.gain.cancelScheduledValues(acTime());
+    gain.gain.setValueAtTime(gain.gain.value, acTime());
+    gain.gain.linearRampToValueAtTime(0, acTime() + 0.8);
+  } catch {
+    /* bỏ qua */
+  }
+}
+
+export function ambientIsOn(): boolean {
+  return ambientOn;
+}
+
+function acTime(): number {
+  try {
+    return ensureCtx()?.currentTime ?? 0;
+  } catch {
+    return 0;
+  }
+}

@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { Flame } from "lucide-react";
 
 import { CultivatorCharacter, type CharPose } from "@/components/dashboard/cultivator-character";
-import { BUILD_STAGES } from "@/lib/game";
-import { haptic, playRewardTing } from "@/lib/sound";
+import { BUILD_STAGES, realmAt, realmStage } from "@/lib/game";
+import { haptic, playAmbient, playRewardTing, playLevelChime, stopAmbient } from "@/lib/sound";
 
 type Mood = "radiant" | "flourish" | "growing" | "neglected";
 
@@ -263,6 +263,8 @@ const INTERACT_STYLE = `
   .animate-toast { animation: tlg-toast 3.4s ease-in-out forwards; }
   @keyframes tlg-ring { 0% { box-shadow: 0 0 0 0 oklch(0.9 0.15 85 / .35); } 100% { box-shadow: 0 0 0 10px oklch(0.9 0.15 85 / 0); } }
   .animate-ring { animation: tlg-ring 2s ease-out infinite; }
+  @keyframes tlg-shoot { 0% { transform: translate(0, 0) rotate(-16deg); opacity: 0; } 8% { opacity: 1; } 45% { opacity: 0; } 100% { transform: translate(140px, 48px) rotate(-16deg); opacity: 0; } }
+  .animate-shoot { animation: tlg-shoot 3.4s linear infinite; }
 `;
 
 interface Props {
@@ -270,9 +272,11 @@ interface Props {
   checkedInToday: boolean;
   lastCheckinDate: string | null;
   name?: string;
+  level?: number;
+  celebrate?: number;
 }
 
-export function RealmScene({ streak, checkedInToday, lastCheckinDate, name }: Props) {
+export function RealmScene({ streak, checkedInToday, lastCheckinDate, name, level, celebrate }: Props) {
   const mood = moodOf(streak, checkedInToday, lastCheckinDate);
   const neglected = mood === "neglected";
 
@@ -284,6 +288,13 @@ export function RealmScene({ streak, checkedInToday, lastCheckinDate, name }: Pr
   const [petHop, setPetHop] = useState(0);
   const idRef = useRef(0);
   const [now, setNow] = useState(() => new Date());
+  const [ambient, setAmbient] = useState(() => {
+    try {
+      return localStorage.getItem("tlg_ambient") === "1";
+    } catch {
+      return false;
+    }
+  });
 
   const prevRank = useRef(MOOD_RANK[mood]);
   const [evolving, setEvolving] = useState(false);
@@ -292,6 +303,27 @@ export function RealmScene({ streak, checkedInToday, lastCheckinDate, name }: Pr
     const timer = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (ambient) playAmbient();
+    else stopAmbient();
+    return () => stopAmbient();
+  }, [ambient]);
+
+  useEffect(() => {
+    if (celebrate && celebrate > 0) {
+      playLevelChime();
+      haptic(60);
+      const t = {
+        id: ++idRef.current,
+        emoji: "⚡",
+        text: "Ngươi vừa hoàn thành bế quan — đạo tâm tăng tiến!",
+      };
+      setToasts((prev) => [...prev.slice(-2), t]);
+      const timer = setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== t.id)), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [celebrate]);
 
   useEffect(() => {
     const prev = prevRank.current;
@@ -388,7 +420,19 @@ export function RealmScene({ streak, checkedInToday, lastCheckinDate, name }: Pr
               }}
             />
           ))}
+          {[0, 1].map((i) => (
+            <span
+              key={`shoot-${i}`}
+              className="animate-shoot absolute h-px w-16 bg-gradient-to-r from-transparent via-white/80 to-transparent"
+              style={{ left: `${4 + i * 42}%`, top: `${5 + i * 16}%`, animationDelay: `${2.5 + i * 6.8}s` }}
+            />
+          ))}
         </>
+      )}
+
+      {/* cực quang — chuỗi dài đêm thanh */}
+      {isNight && weather === "clear" && streak >= 30 && (
+        <div className="animate-float absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-emerald-300/15 via-teal-400/5 to-transparent blur-md" />
       )}
 
       {/* mây */}
@@ -480,8 +524,18 @@ export function RealmScene({ streak, checkedInToday, lastCheckinDate, name }: Pr
 
       {/* NHÂN VẬT 2D */}
       <div className="absolute bottom-1 left-[24%] z-[4] h-[72%] w-auto sm:left-[28%]">
-        <CultivatorCharacter level={Math.max(1, streak)} pose={activePose} />
+        <CultivatorCharacter level={Math.max(1, level ?? streak)} pose={activePose} />
       </div>
+
+      {/* nameplate nhân vật */}
+      {name && (
+        <div className="absolute bottom-[74%] left-[24%] z-[5] sm:left-[28%]">
+          <span className="whitespace-nowrap rounded-full border border-white/15 bg-black/50 px-2 py-0.5 text-[9px] text-white/85 backdrop-blur-sm">
+            {name} · Lv {Math.max(1, level ?? streak)} · {realmAt(Math.max(1, level ?? streak))}{" "}
+            {realmStage(Math.max(1, level ?? streak))}
+          </span>
+        </div>
+      )}
 
       {/* Linh thú */}
       <div className="absolute bottom-1 right-7 z-[4] text-right">
@@ -625,6 +679,25 @@ export function RealmScene({ streak, checkedInToday, lastCheckinDate, name }: Pr
         />
         <span className="text-[10px] font-semibold text-white/90">{streak}</span>
       </div>
+
+      {/* nhạc nền */}
+      <button
+        onClick={() => {
+          setAmbient((a) => {
+            const next = !a;
+            try {
+              localStorage.setItem("tlg_ambient", next ? "1" : "0");
+            } catch {
+              /* bỏ qua */
+            }
+            return next;
+          });
+        }}
+        title={ambient ? "Tắt nhạc nền" : "Bật nhạc nền"}
+        className="absolute right-[88px] top-3 z-[5] flex size-7 items-center justify-center rounded-full border border-white/15 bg-black/45 text-[11px] backdrop-blur-sm transition-transform active:scale-90"
+      >
+        {ambient ? "🔊" : "🔇"}
+      </button>
 
       {/* Quẻ hôm nay */}
       {name && (
