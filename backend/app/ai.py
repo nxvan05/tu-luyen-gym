@@ -145,10 +145,48 @@ def generate_journal(
         print(f"[AI] Journal generation failed: {e}")
         return None
 
-    cleaned = text.strip().strip('"').strip()
-    if len(cleaned) < 20:
+WEEKLY_SUMMARY_PROMPT = """Bạn là sư phụ trong app tu luyện, tổng kết tuần cho đệ tử.
+
+Đệ tử: {name}
+Hoạt động 7 ngày qua:
+{items}
+
+Viết 3-5 câu tổng kết bằng tiếng Việt, giọng sư phụ tu tiên: khen tiến bộ, nhắc điểm cần giữ,
+gợi mở điều cải thiện. Không dùng dấu đầu dòng, chỉ là đoạn văn xuôi."""
+
+
+def generate_weekly_summary(name: str, items_text: str) -> str | None:
+    key = settings.gemini_api_key
+    if not key:
         return None
-    return cleaned[:600]
+
+    prompt = WEEKLY_SUMMARY_PROMPT.format(name=name, items=items_text)
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.8, "maxOutputTokens": 1500},
+    }
+
+    try:
+        with httpx.Client(timeout=45) as client:
+            res = client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{settings.gemini_model}:generateContent",
+                params={"key": key},
+                json=payload,
+            )
+            res.raise_for_status()
+            text = (
+                res.json()
+                .get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "")
+            )
+    except Exception as e:
+        print(f"[AI] Weekly summary failed: {e}")
+        return None
+
+    cleaned = text.strip().strip('"')
+    return cleaned if len(cleaned) >= 20 else None
 
 
 READ_EVAL_PROMPT = """Bạn là sư phụ kiểm tra tâm đắc đọc sách của đệ tử trong app tu tiên.

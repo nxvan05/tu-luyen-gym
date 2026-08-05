@@ -138,6 +138,28 @@ export interface CheckinResult {
   boss_slain?: { defeated: boolean; rank: number | null; reward: number } | null;
 }
 
+export interface HistoryActivity {
+  date: string;
+  type: string;
+  emoji: string;
+  label: string;
+  exp: number;
+  detail: string;
+}
+
+export interface WeekDay {
+  date: string;
+  label: string;
+  count: number;
+  emojis: string[];
+}
+
+export interface HistoryData {
+  activities: HistoryActivity[];
+  week: WeekDay[];
+  total_exp_week: number;
+}
+
 export interface LeaderboardRow {
   rank: number;
   name: string;

@@ -137,6 +137,16 @@ ARTIFACT_POOLS = {
 # Thưởng khi Boss bị hạ — top 3 sát thương
 BOSS_SLAIN_REWARDS = {1: 1000, 2: 500, 3: 250}
 
+ACTIVITY_META = {
+    "push": {"emoji": "🏋️", "label": "Luyện Thể · Đẩy tạ"},
+    "pull": {"emoji": "🤸", "label": "Luyện Thể · Kéo xà"},
+    "legs": {"emoji": "🦵", "label": "Luyện Thể · Chân"},
+    "cardio": {"emoji": "🏃", "label": "Thân Pháp · Chạy bộ"},
+    "rest": {"emoji": "🧘", "label": "Tĩnh Tâm"},
+    "meditation": {"emoji": "🪷", "label": "Thiền Định"},
+    "reading": {"emoji": "📚", "label": "Đọc Sách"},
+}
+
 
 def _boss_expired(boss: dict) -> bool:
     ends = boss.get("ends_at")
@@ -655,6 +665,138 @@ def leaderboard() -> dict:
 
 def _parse_date(value: str) -> date:
     return date.fromisoformat(value)
+
+
+@router.get("/history")
+def history(cultivator: dict = Depends(current_cultivator)) -> dict:
+    """Lịch sử tu luyện: hoạt động gần đây + lưới 7 ngày gần nhất."""
+    cid = cultivator["id"]
+
+    activities: list[dict] = []
+    try:
+        for c in db.select(
+            "checkins",
+            cultivator_id=f"eq.{cid}",
+            order="checked_in_date.desc",
+            limit="15",
+        ):
+            meta = ACTIVITY_META.get(c["workout_type"], {})
+            activities.append(
+                {
+                    "date": str(c["checked_in_date"]),
+                    "type": "checkin",
+                    "emoji": meta.get("emoji", "⚡"),
+                    "label": meta.get("label", c["workout_type"]),
+                    "exp": c["exp_gained"],
+                    "detail": f"+{c['exp_gained']} EXP",
+                }
+            )
+    except Exception:
+        pass
+    try:
+        for m in db.select(
+            "meditations",
+            cultivator_id=f"eq.{cid}",
+            order="meditated_on.desc",
+            limit="10",
+        ):
+            activities.append(
+                {
+                    "date": str(m["meditated_on"]),
+                    "type": "meditation",
+                    "emoji": ACTIVITY_META["meditation"]["emoji"],
+                    "label": f"Thiền {m['minutes']} phút",
+                    "exp": m["exp_gained"],
+                    "detail": f"+{m['energy_gained']} ⚡ Linh Khí",
+                }
+            )
+    except Exception:
+        pass
+    try:
+        for r in db.select(
+            "reading_sessions",
+            cultivator_id=f"eq.{cid}",
+            order="session_date.desc",
+            limit="10",
+        ):
+            activities.append(
+                {
+                    "date": str(r["session_date"]),
+                    "type": "reading",
+                    "emoji": ACTIVITY_META["reading"]["emoji"],
+                    "label": f"Đọc: {r['title'][:36]}",
+                    "exp": r["exp_gained"],
+                    "detail": f"+{r['exp_gained']} EXP",
+                }
+            )
+    except Exception:
+        pass
+
+    activities.sort(key=lambda a: a["date"], reverse=True)
+
+    week: list[dict] = []
+    today = _today_utc()
+    by_date: dict[str, list[str]] = {}
+    for a in activities:
+        d = str(a["date"])[:10]
+        by_date.setdefault(d, []).append(a["emoji"])
+    for offset in range(6, -1, -1):
+        day = today - timedelta(days=offset)
+        iso = day.isoformat()
+        items = by_date.get(iso, [])
+        week.append(
+            {
+                "date": iso,
+                "label": "Hôm nay" if offset == 0 else ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][day.weekday()],
+                "count": len(items),
+                "emojis": items[:4],
+            }
+        )
+
+    return {
+        "activities": activities[:30],
+        "week": week,
+        "total_exp_week": sum(
+            a["exp"]
+            for a in activities
+            if str(a["date"])[:10] >= (today - timedelta(days=6)).isoformat()
+        ),
+    }
+
+
+class WeeklySummaryRequest(BaseModel):
+    pass
+
+
+@router.post("/weekly-summary")
+def weekly_summary(cultivator: dict = Depends(current_cultivator)) -> dict:
+    """Sư phụ (AI) tổng kết tuần tu luyện."""
+    data = history(cultivator)
+    week_items = [
+        a for a in data["activities"] if str(a["date"])[:10] >= (_today_utc() - timedelta(days=6)).isoformat()
+    ]
+    if not week_items:
+        raise HTTPException(422, "Tuần này đệ tử chưa có hoạt động nào — hãy tu luyện đã")
+
+    lines = [
+        f"- {a['date']}: {a['label']} ({a['detail']})"
+        for a in reversed(week_items)
+    ]
+    name = cultivator.get("display_name") or cultivator["username"]
+
+    try:
+        from app.ai import generate_weekly_summary
+
+        summary = generate_weekly_summary(name, "\n".join(lines))
+    except Exception as e:
+        print(f"[WeeklySummary] failed: {e}")
+        summary = None
+    if not summary:
+        summary = (
+            f"Tuần này {name} luyện tập {len(week_items)} buổi, "
+            f"thu về {data['total_exp_week']} EXP. Đạo tâm cần giữ lửa!"
+        )
+    return {"summary": summary, "activity_count": len(week_items)}
 
 
 @router.post("/realm/start")
