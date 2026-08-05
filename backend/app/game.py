@@ -1240,16 +1240,23 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
     ) if boss else []
 
     server_damage = 0
+    boss_killer = None
     if boss:
         try:
-            server_damage = sum(
-                r["damage"]
-                for r in db.select(
-                    "boss_damage",
-                    boss_id=f"eq.{boss['id']}",
-                    select="damage",
-                )
+            damage_rows = db.select(
+                "boss_damage",
+                boss_id=f"eq.{boss['id']}",
+                select="cultivator_id,damage",
             )
+            server_damage = sum(r["damage"] for r in damage_rows)
+            totals: dict[str, int] = defaultdict(int)
+            for r in damage_rows:
+                totals[r["cultivator_id"]] += r["damage"]
+            if totals:
+                top_id = max(totals, key=totals.get)
+                top = db.select_one("cultivators", id=f"eq.{top_id}")
+                if top:
+                    boss_killer = top.get("display_name") or top["username"]
         except Exception:
             server_damage = 0
 
@@ -1365,6 +1372,8 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
             "ends_at": boss["ends_at"],
             "my_damage": sum(r["damage"] for r in my_damage_rows),
             "server_damage": server_damage,
+            "killed": boss["hp"] <= 0,
+            "killer": boss_killer,
         }
         if boss
         else None,

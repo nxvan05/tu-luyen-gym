@@ -5,8 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Camera, Check, Loader2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { WORKOUT_TYPES, type CheckinResult } from "@/lib/game";
-import { playLevelChime, playRareDrop, playRewardTing, haptic } from "@/lib/sound";
+import { WORKOUT_TYPES, realmAt, realmStage, type CheckinResult } from "@/lib/game";
+import { haptic, playLevelChime, playRareDrop, playRewardTing } from "@/lib/sound";
 
 type Step = "pick" | "photo" | "verifying" | "done";
 
@@ -335,6 +335,49 @@ export function CheckIn({ name, checkedIn, onSuccess }: Props) {
                   </Button>
                 </div>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {step === "done" && result?.leveled_up && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ delay: 1.6, duration: 0.4 }}
+            onAnimationStart={() => {
+              playLevelChime();
+              haptic(120);
+            }}
+            className="fixed inset-0 z-[70] flex cursor-pointer items-center justify-center overflow-hidden bg-black/85 backdrop-blur-md"
+            onClick={() => setOpen(false)}
+          >
+            <motion.div
+              className="pointer-events-none absolute size-[80vmin] rounded-full opacity-60"
+              style={{
+                background:
+                  "conic-gradient(from 0deg, transparent 0deg, oklch(0.85 0.16 85 / 0.35) 30deg, transparent 60deg, transparent 180deg, oklch(0.85 0.16 85 / 0.35) 210deg, transparent 240deg)",
+              }}
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
+            />
+            <motion.div
+              initial={{ scale: 0.5, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              transition={{ delay: 1.8, type: "spring", stiffness: 180, damping: 14 }}
+              className="relative text-center"
+            >
+              <p className="font-heading bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-5xl font-black tracking-widest text-transparent drop-shadow-[0_0_30px_oklch(0.85_0.16_85/60%)]">
+                ĐỘT PHÁ!
+              </p>
+              <p className="mt-3 text-2xl font-bold text-foreground">
+                ⚡ Lv {result.level} · {realmAt(result.level)} {realmStage(result.level)}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Linh khí quanh ngươi rung động — chạm để tiếp tục.
+              </p>
             </motion.div>
           </motion.div>
         )}

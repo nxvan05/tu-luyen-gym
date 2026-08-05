@@ -143,6 +143,14 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
         </div>
       )}
 
+      {boss?.killed && (
+        <div className="mb-6 animate-glow-pulse rounded-xl border border-amber-400/50 bg-gradient-to-r from-amber-400/15 via-amber-400/5 to-amber-400/15 px-4 py-3 text-sm text-amber-300">
+          ⚔️ <b>{boss.name}</b> đã bị hạ!
+          {boss.killer ? ` Kẻ hạ sát: ${boss.killer}` : ""} — Ma Thú sẽ trở lại vào tuần
+          sau, các tu sĩ hãy chuẩn bị.
+        </div>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <CultivatorCard
@@ -170,6 +178,8 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
                       serverDamage: boss.server_damage ?? 0,
                       reward: 5000,
                       endsAt: boss.ends_at,
+                      killed: boss.killed,
+                      killer: boss.killer,
                     }
                   : {
                       name: "Chưa có Boss tuần",

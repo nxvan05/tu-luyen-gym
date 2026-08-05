@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Shuffle } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -34,10 +36,17 @@ function statOf(row: LeaderboardRow, tab: TabKey): string {
 export function Leaderboard({ boards }: { boards: Record<TabKey, LeaderboardRow[]> }) {
   const [tab, setTab] = useState<TabKey>("exp");
   const rows = boards[tab] ?? [];
+  const router = useRouter();
+
+  function wander() {
+    if (rows.length === 0) return;
+    const pick = rows[Math.floor(Math.random() * rows.length)];
+    router.push(`/thanh-vien/${encodeURIComponent(pick.username)}`);
+  }
 
   return (
     <div>
-      <div className="mx-auto flex max-w-md gap-1 rounded-full border border-border bg-card p-1">
+      <div className="mx-auto flex max-w-lg items-center gap-1 rounded-full border border-border bg-card p-1">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -51,6 +60,15 @@ export function Leaderboard({ boards }: { boards: Record<TabKey, LeaderboardRow[
             {t.emoji} {t.label}
           </button>
         ))}
+        <button
+          onClick={wander}
+          disabled={rows.length === 0}
+          title="Ghép duyên — ghé thăm một Động Phủ ngẫu nhiên"
+          className="flex shrink-0 items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-40"
+        >
+          <Shuffle className="size-4" />
+          <span className="hidden sm:inline">Du Hành</span>
+        </button>
       </div>
 
       <div className="mt-6 space-y-2">

@@ -110,6 +110,8 @@ export interface BossData {
   ends_at: string | null;
   my_damage: number;
   server_damage?: number;
+  killed?: boolean;
+  killer?: string | null;
 }
 
 export interface QuestData {

@@ -12,6 +12,8 @@ interface BossView {
   serverDamage?: number;
   reward: number;
   endsAt?: string | null;
+  killed?: boolean;
+  killer?: string | null;
 }
 
 const LORE: Record<string, string> = {
@@ -74,17 +76,21 @@ export function BossCard({ boss }: { boss: BossView }) {
           </div>
           <Badge
             variant="outline"
-            className={`gap-1 border-destructive/40 text-destructive ${
-              angry ? "animate-pulse" : ""
-            }`}
+            className={`gap-1 ${
+              boss.killed
+                ? "border-amber-400/50 bg-amber-400/10 text-amber-300"
+                : "border-destructive/40 text-destructive"
+            } ${!boss.killed && angry ? "animate-pulse" : ""}`}
           >
             <Swords className="size-3.5" />
-            {mood.emoji} {mood.label}
+            {boss.killed ? `💀 Đã Bị Hạ${boss.killer ? ` · ${boss.killer}` : ""}` : `${mood.emoji} ${mood.label}`}
           </Badge>
         </div>
 
         <p className="mt-3 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs italic leading-relaxed text-muted-foreground">
-          {lore}
+          {boss.killed
+            ? `Ma thú đã gục ngã, tu sĩ toàn môn hưởng khí vận — tàn hồn sẽ tụ lại thành kẻ thù mới vào tuần sau.`
+            : lore}
         </p>
 
         <div className="mt-4">
