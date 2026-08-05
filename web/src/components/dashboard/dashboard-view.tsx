@@ -7,6 +7,9 @@ import { CultivatorCard } from "@/components/dashboard/cultivator-card";
 import { BossCard } from "@/components/dashboard/boss-card";
 import { QuestsCard } from "@/components/dashboard/quests-card";
 import { AchievementsCard } from "@/components/dashboard/achievements-card";
+import { JournalCard } from "@/components/dashboard/journal-card";
+import { KyNgo } from "@/components/dashboard/ky-ngo";
+import { RealmScene } from "@/components/dashboard/realm-scene";
 import { CheckIn } from "@/components/dashboard/checkin";
 import { realmAt, realmStage, type DashboardData } from "@/lib/game";
 
@@ -89,6 +92,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
   const boss = live?.boss ?? null;
   const quests = live?.quests ?? [];
   const achievements = live?.achievements ?? [];
+  const journal = live?.journal ?? [];
 
   const realm = cultivator
     ? `${realmAt(cultivator.level)} · ${realmStage(cultivator.level)}`
@@ -96,7 +100,13 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <RealmScene
+        streak={cultivator?.streak ?? 0}
+        checkedInToday={cultivator?.checked_in_today ?? false}
+        lastCheckinDate={cultivator?.last_checkin_date ?? null}
+      />
+
+      <div className="mb-6 mt-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-heading text-2xl font-bold sm:text-3xl">
             🏯 Động Phủ của{" "}
@@ -161,9 +171,14 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
           </section>
         </div>
         <div className="space-y-4">
+          <KyNgo />
           <QuestsCard quests={quests} />
           <AchievementsCard achievements={achievements} />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <JournalCard entries={journal} />
       </div>
     </div>
   );

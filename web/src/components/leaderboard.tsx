@@ -11,7 +11,7 @@ type TabKey = "exp" | "streak" | "boss";
 
 const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: "exp", label: "Top EXP", emoji: "⚡" },
-  { key: "streak", label: "Top Streak", emoji: "🔥" },
+  { key: "streak", label: "Top Đạo Tâm", emoji: "🔥" },
   { key: "boss", label: "Boss Damage", emoji: "🐉" },
 ];
 

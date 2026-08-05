@@ -81,7 +81,7 @@ export function CultivatorCard({
         <div className="mt-5 grid grid-cols-3 gap-3 border-t border-border/60 pt-4">
           <div>
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Flame className="size-3.5 animate-pop-glow text-primary" /> Chuỗi hiện tại
+              <Flame className="size-3.5 animate-pop-glow text-primary" /> Đạo Tâm
             </p>
             <p className="mt-1 font-mono text-lg font-bold">{streak} ngày</p>
           </div>

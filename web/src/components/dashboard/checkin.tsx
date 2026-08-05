@@ -248,7 +248,7 @@ export function CheckIn({ name, checkedIn, onSuccess }: Props) {
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     <strong className="text-foreground">{name}</strong> đã đột phá!
                     <br />
-                    🔥 Chuỗi {result.streak} ngày · +{result.exp_gained} EXP
+                    🔥 Đạo Tâm {result.streak} ngày · +{result.exp_gained} EXP
                     <br />
                     🐉 Gây {result.damage.toLocaleString("vi-VN")} sát thương lên Boss
                   </p>

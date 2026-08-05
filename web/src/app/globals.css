@@ -225,6 +225,53 @@
   }
 }
 
+@keyframes drift {
+  0% {
+    transform: translateX(-12%);
+  }
+  100% {
+    transform: translateX(112%);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes rain-fall {
+  0% {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(120px);
+    opacity: 0.1;
+  }
+}
+
+.animate-drift {
+  animation: drift linear infinite;
+}
+
+.animate-twinkle {
+  animation: twinkle ease-in-out infinite;
+}
+
+.animate-rain {
+  animation: rain-fall linear infinite;
+}
+
 .animate-rise {
   animation: rise linear infinite;
 }

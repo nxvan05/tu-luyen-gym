@@ -75,11 +75,18 @@ export interface AchievementData {
   unlocked: boolean;
 }
 
+export interface JournalEntry {
+  id: string;
+  entry_date: string;
+  content: string;
+}
+
 export interface DashboardData {
   cultivator: CultivatorData;
   boss: BossData | null;
   quests: QuestData[];
   achievements: AchievementData[];
+  journal: JournalEntry[];
 }
 
 export interface CheckinResult {

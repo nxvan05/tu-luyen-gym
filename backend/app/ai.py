@@ -52,7 +52,10 @@ def verify_gym_photo(image_bytes: bytes, mime: str) -> VerifyResult:
                 ]
             }
         ],
-        "generationConfig": {"temperature": 0, "maxOutputTokens": 200},
+        "generationConfig": {
+            "temperature": 0,
+            "maxOutputTokens": 2000,
+        },
     }
 
     try:
@@ -82,3 +85,67 @@ def verify_gym_photo(image_bytes: bytes, mime: str) -> VerifyResult:
     except Exception:
         print(f"[AI] Cannot parse Gemini response: {text[:200]}")
         return VerifyResult(True, "AI trả lời không đọc được — chấp nhận")
+
+
+JOURNAL_PROMPT = """Bạn là nhà văn viết tiểu thuyết tu tiên, chuyên viết nhật ký tu luyện hằng ngày cho một người tập gym.
+
+Thông tin hôm nay:
+- Người tu luyện: {name}
+- Buổi luyện: {workout}
+- Đạo tâm (chuỗi ngày liên tiếp): {streak} ngày
+- Linh khí tăng: +{exp} EXP
+- Cảnh giới hiện tại: {level_text}
+
+Nhiệm vụ: Viết DUY NHẤT một đoạn nhật ký 3-4 câu bằng tiếng Việt, giọng văn cổ phong tu tiên, kể chuyện người tu luyện vừa kết thúc buổi luyện: bước vào phòng luyện công, vận công, linh khí luân chuyển trong kinh mạch, cảm nhận tiến bộ. Nếu chuỗi >= 7 ngày, nhắc đến đạo tâm kiên định. Không nhắc lại danh sách thông tin, không giải thích, không tiêu đề, không dấu sao."""
+
+
+def generate_journal(
+    name: str,
+    workout_label: str,
+    exp: int,
+    streak: int,
+    level_text: str,
+) -> str | None:
+    """Viết nhật ký tu tiên sau khi bế quan. Trả None nếu AI lỗi."""
+    key = settings.gemini_api_key
+    if not key:
+        return None
+
+    prompt = JOURNAL_PROMPT.format(
+        name=name,
+        workout=workout_label,
+        exp=exp,
+        streak=streak,
+        level_text=level_text,
+    )
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.9,
+            "maxOutputTokens": 8192,
+        },
+    }
+
+    try:
+        with httpx.Client(timeout=30) as client:
+            res = client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{settings.gemini_model}:generateContent",
+                params={"key": key},
+                json=payload,
+            )
+            res.raise_for_status()
+            text = (
+                res.json()
+                .get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "")
+            )
+    except Exception as e:
+        print(f"[AI] Journal generation failed: {e}")
+        return None
+
+    cleaned = text.strip().strip('"').strip()
+    if len(cleaned) < 20:
+        return None
+    return cleaned[:600]

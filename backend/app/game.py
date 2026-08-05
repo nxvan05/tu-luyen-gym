@@ -9,7 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from app import db
-from app.ai import verify_gym_photo
+from app.ai import generate_journal, verify_gym_photo
 from app.notify import notify_checkin
 from app.security import verify_token
 from app.storage import ensure_bucket, upload_image
@@ -20,6 +20,13 @@ bearer = HTTPBearer(auto_error=False)
 
 # EXP theo loại buổi tập — đồng bộ với bảng quests
 WORKOUT_EXP = {"push": 120, "pull": 120, "legs": 130, "cardio": 90, "rest": 40}
+WORKOUT_LABELS = {
+    "push": "Luyện Thể · Đẩy tạ",
+    "pull": "Luyện Thể · Kéo xà",
+    "legs": "Luyện Thể · Chân",
+    "cardio": "Thân Pháp · Chạy bộ",
+    "rest": "Tĩnh Dưỡng",
+}
 # Sát thương Boss = EXP * hệ số
 BOSS_DAMAGE_PER_EXP = 100
 BOSS_SEASON = 1
@@ -206,6 +213,26 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
         damage=damage,
     )
 
+    try:
+        entry = generate_journal(
+            name=cultivator.get("display_name") or cultivator["username"],
+            workout_label=WORKOUT_LABELS.get(req.workout_type, req.workout_type),
+            exp=gained,
+            streak=streak,
+            level_text=f"Lv {cultivator['level']}",
+        )
+        if entry:
+            db.insert(
+                "journal_entries",
+                {
+                    "cultivator_id": cultivator["id"],
+                    "entry_date": today.isoformat(),
+                    "content": entry,
+                },
+            )
+    except Exception as e:
+        print(f"[Journal] skip: {e}")
+
     return {
         "checkin": record,
         "exp_gained": gained,
@@ -324,12 +351,30 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
         select="damage",
     ) if boss else []
 
+    try:
+        journal_rows = db.select(
+            "journal_entries",
+            cultivator_id=f"eq.{cultivator['id']}",
+            order="entry_date.desc",
+            limit="5",
+        )
+    except Exception:
+        journal_rows = []
+
     return {
         "cultivator": {
             **cultivator,
             "exp_to_next": exp_to_next(cultivator["level"]),
             "checked_in_today": bool(today_checkins),
         },
+        "journal": [
+            {
+                "id": j["id"],
+                "entry_date": j["entry_date"],
+                "content": j["content"],
+            }
+            for j in journal_rows
+        ],
         "boss": {
             "name": boss["name"],
             "hp": boss["hp"],
