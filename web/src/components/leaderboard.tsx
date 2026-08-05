@@ -27,7 +27,7 @@ function statOf(row: LeaderboardRow, tab: TabKey): string {
 
 export function Leaderboard({ boards }: { boards: Record<TabKey, LeaderboardRow[]> }) {
   const [tab, setTab] = useState<TabKey>("exp");
-  const rows = boards[tab];
+  const rows = boards[tab] ?? [];
 
   return (
     <div>

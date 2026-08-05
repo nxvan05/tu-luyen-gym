@@ -6,7 +6,7 @@ import { Leaderboard } from "@/components/leaderboard";
 import { fetchWithRetry } from "@/lib/fetch-retry";
 import type { LeaderboardData } from "@/lib/game";
 
-const CACHE_KEY = "tlg_leaderboard";
+const CACHE_KEY = "tlg_leaderboard_v2";
 
 export function LeaderboardLive() {
   const [initData] = useState<LeaderboardData | null>(() => {
@@ -54,6 +54,7 @@ export function LeaderboardLive() {
   }, [initData]);
 
   const empty = { exp: [], streak: [], boss: [], week: [] };
+  const merged = { ...empty, ...(boards ?? empty) };
 
   return (
     <div>
@@ -62,7 +63,7 @@ export function LeaderboardLive() {
           ⚠️ {error} Đang hiển thị dữ liệu cũ.
         </div>
       )}
-      <Leaderboard boards={boards ?? empty} />
+      <Leaderboard boards={merged} />
     </div>
   );
 }
