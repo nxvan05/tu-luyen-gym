@@ -108,6 +108,7 @@ export interface BossData {
   hp: number;
   max_hp: number;
   ends_at: string | null;
+  season?: number;
   my_damage: number;
   server_damage?: number;
   killed?: boolean;
@@ -172,6 +173,23 @@ export interface CheckinResult {
   } | null;
   boss_slain?: { defeated: boolean; rank: number | null; reward: number } | null;
   freeze_used?: boolean;
+  coach_comment?: string | null;
+}
+
+export interface CultivatorPublic {
+  display_name: string | null;
+  username: string;
+  avatar_url: string | null;
+  level: number;
+  exp: number;
+  streak: number;
+  best_streak: number;
+  last_checkin_date: string | null;
+  realm_stage: string;
+}
+
+export interface CultivatorsData {
+  members: CultivatorPublic[];
 }
 
 export interface HistoryActivity {

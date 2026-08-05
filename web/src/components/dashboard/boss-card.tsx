@@ -14,6 +14,7 @@ interface BossView {
   endsAt?: string | null;
   killed?: boolean;
   killer?: string | null;
+  season?: number;
 }
 
 const LORE: Record<string, string> = {
@@ -48,7 +49,7 @@ export function BossCard({ boss }: { boss: BossView }) {
   const hpPercent = boss.maxHp > 0 ? Math.round((boss.hp / boss.maxHp) * 100) : 0;
   const mood = MOODS.find((m) => hpPercent >= m.min) ?? MOODS[2];
   const serverPercent = boss.maxHp > 0 ? Math.round(((boss.serverDamage ?? 0) / boss.maxHp) * 100) : 0;
-  const season = 1;
+  const season = boss.season ?? 1;
   const level = 50 + (season - 1) * 12;
   const lore = LORE[boss.name] ?? "Ma thú từ tà khí ngưng tụ, đang gieo rắc tai ương lên tiên giới.";
   const angry = hpPercent < 50;

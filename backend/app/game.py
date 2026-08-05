@@ -499,10 +499,13 @@ def _apply_achievements(cultivator: dict) -> list[dict]:
     return earned
 
 
-def _handle_photo(req: CheckinRequest, cultivator: dict) -> str | None:
-    """Xác nhận ảnh bằng AI (nếu cấu hình) rồi upload lên Storage."""
+def _handle_photo(req: CheckinRequest, cultivator: dict) -> tuple[str | None, str | None]:
+    """Xác nhận ảnh bằng AI (nếu cấu hình) rồi upload lên Storage.
+
+    Trả về (đường dẫn ảnh, lời nhận xét của Sư phụ AI).
+    """
     if not req.photo:
-        return None
+        return None, None
 
     header, _, b64 = req.photo.partition(",")
     mime = (
@@ -522,8 +525,13 @@ def _handle_photo(req: CheckinRequest, cultivator: dict) -> str | None:
     if not verdict.valid:
         raise HTTPException(422, f"Ảnh không hợp lệ: {verdict.reason}")
 
+    _GENERIC = ("chưa được cấu hình", "tạm lỗi", "không đọc được")
+    comment = None
+    if verdict.reason and len(verdict.reason) > 5 and not any(g in verdict.reason for g in _GENERIC):
+        comment = verdict.reason.strip()
+
     ensure_bucket()
-    return upload_image(cultivator["id"], image_bytes, mime)
+    return upload_image(cultivator["id"], image_bytes, mime), comment
 
 
 @router.post("/checkin")
@@ -535,7 +543,7 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
     if cultivator["last_checkin_date"] and _parse_date(cultivator["last_checkin_date"]) == today:
         raise HTTPException(409, "Hôm nay đã bế quan rồi")
 
-    photo_url = _handle_photo(req, cultivator)
+    photo_url, coach_comment = _handle_photo(req, cultivator)
 
     gained = WORKOUT_EXP[req.workout_type]
     streak, best_streak, freeze_used = _streak_with_freeze(cultivator, today)
@@ -622,6 +630,7 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
         "artifact": artifact,
         "boss_slain": slain,
         "freeze_used": freeze_used,
+        "coach_comment": coach_comment,
     }
 
 
@@ -743,6 +752,32 @@ def leaderboard() -> dict:
     ]
 
     return {"exp": exp_board, "streak": streak_board, "boss": boss_board, "week": week_board}
+
+
+@router.get("/cultivators")
+def cultivators() -> dict:
+    """Sư Môn: danh sách toàn bộ tu sĩ — thông tin công khai."""
+    rows = db.select(
+        "cultivators",
+        order="level.desc,exp.desc,best_streak.desc",
+        limit="100",
+        select="username,display_name,avatar_url,level,exp,streak,best_streak,last_checkin_date",
+    )
+    members = [
+        {
+            "display_name": r.get("display_name"),
+            "username": r["username"],
+            "avatar_url": r.get("avatar_url"),
+            "level": r["level"],
+            "exp": r["exp"],
+            "streak": r["streak"],
+            "best_streak": r["best_streak"],
+            "last_checkin_date": r.get("last_checkin_date"),
+            "realm_stage": _realm_stage_name(r["streak"]),
+        }
+        for r in rows
+    ]
+    return {"members": members}
 
 
 @router.get("/boss-history")
@@ -1370,6 +1405,7 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
             "hp": boss["hp"],
             "max_hp": boss["max_hp"],
             "ends_at": boss["ends_at"],
+            "season": boss["season"],
             "my_damage": sum(r["damage"] for r in my_damage_rows),
             "server_damage": server_damage,
             "killed": boss["hp"] <= 0,

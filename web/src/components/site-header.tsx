@@ -26,6 +26,9 @@ export function SiteHeader({ session }: { session: Session | null }) {
           <Link href="/leaderboard" className="transition-colors hover:text-foreground">
             BXH
           </Link>
+          <Link href="/su-mon" className="transition-colors hover:text-foreground">
+            Sư Môn
+          </Link>
           <Link href="/lich-su" className="transition-colors hover:text-foreground">
             Lịch Sử
           </Link>

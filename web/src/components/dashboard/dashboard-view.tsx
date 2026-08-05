@@ -180,6 +180,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
                       endsAt: boss.ends_at,
                       killed: boss.killed,
                       killer: boss.killer,
+                      season: boss.season ?? 1,
                     }
                   : {
                       name: "Chưa có Boss tuần",

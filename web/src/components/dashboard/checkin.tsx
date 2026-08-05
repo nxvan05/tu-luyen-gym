@@ -91,11 +91,20 @@ export function CheckIn({ name, checkedIn, onSuccess }: Props) {
 
   function buildRewards(r: CheckinResult): RewardLine[] {
     const lines: RewardLine[] = [
-      { emoji: "⚡", text: `+${r.exp_gained} EXP`, highlight: true },
+      {
+        emoji: WORKOUT_TYPES.find((w) => w.key === workoutType)?.emoji ?? "⚡",
+        text: `+${r.exp_gained} EXP`,
+        highlight: true,
+      },
+    ];
+    if (r.coach_comment) {
+      lines.push({ emoji: "🧘", text: `Sư phụ: "${r.coach_comment}"` });
+    }
+    lines.push(
       { emoji: "🔥", text: `Đạo Tâm ${r.streak} ngày` },
       { emoji: "🌱", text: "Cây Đạo lớn thêm một nhánh" },
-      { emoji: "🐉", text: `Boss nhận ${r.damage.toLocaleString("vi-VN")} sát thương` },
-    ];
+      { emoji: "🐉", text: `Boss nhận ${r.damage.toLocaleString("vi-VN")} sát thương` }
+    );
     if (r.artifact) {
       lines.push({
         emoji: r.artifact.emoji,
