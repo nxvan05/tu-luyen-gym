@@ -8,11 +8,21 @@ class Settings(BaseSettings):
     env: str = "development"
     # CORS — URL frontend (Vercel khi deploy)
     cors_origins: list[str] = ["http://localhost:3000"]
-    # Discord webhook — thêm trong Tuần 4
+
+    # Supabase (Project URL + secret key — key SECRET không bao giờ ở frontend)
+    supabase_url: str = ""
+    supabase_secret_key: str = ""
+
+    # Discord OAuth — backend thực hiện trao đổi code
+    discord_client_id: str = ""
+    discord_client_secret: str = ""
+
+    # Khóa ký JWT (chia sẻ với web/.env.local để verify)
+    jwt_secret: str = "dev-secret-doi-truoc-khi-deploy"
+    jwt_expire_days: int = 30
+
+    # Tuần 4: Discord webhook
     discord_webhook_url: str | None = None
-    # Supabase (Tuần 2+)
-    supabase_url: str | None = None
-    supabase_key: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
