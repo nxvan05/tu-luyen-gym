@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Camera, Check, Loader2, X } from "lucide-react";
 
@@ -13,10 +12,10 @@ type Step = "pick" | "photo" | "verifying" | "done";
 interface Props {
   name: string;
   checkedIn: boolean;
+  onSuccess?: () => void;
 }
 
-export function CheckIn({ name, checkedIn }: Props) {
-  const router = useRouter();
+export function CheckIn({ name, checkedIn, onSuccess }: Props) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("pick");
   const [workoutType, setWorkoutType] = useState<string | null>(null);
@@ -52,7 +51,7 @@ export function CheckIn({ name, checkedIn }: Props) {
       }
       setResult((await res.json()) as CheckinResult);
       setStep("done");
-      router.refresh();
+      onSuccess?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Lỗi không xác định");
       setStep("pick");

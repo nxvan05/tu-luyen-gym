@@ -1,0 +1,161 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import { CultivatorCard } from "@/components/dashboard/cultivator-card";
+import { BossCard } from "@/components/dashboard/boss-card";
+import { QuestsCard } from "@/components/dashboard/quests-card";
+import { AchievementsCard } from "@/components/dashboard/achievements-card";
+import { CheckIn } from "@/components/dashboard/checkin";
+import { realmAt, realmStage, type DashboardData } from "@/lib/game";
+
+const CACHE_KEY = "tlg_dashboard";
+
+interface Props {
+  displayName: string;
+  avatarUrl: string | null;
+}
+
+export function DashboardView({ displayName, avatarUrl }: Props) {
+  const [initData] = useState<DashboardData | null>(() => {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { data: DashboardData };
+        if (parsed.data?.cultivator) return parsed.data;
+      }
+    } catch {
+      /* bỏ qua cache hỏng */
+    }
+    return null;
+  });
+  const [live, setLive] = useState<DashboardData | null>(initData);
+  const [error, setError] = useState<string | null>(null);
+
+  async function refreshData() {
+    try {
+      const res = await fetch("/api/dashboard", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as DashboardData;
+      setLive(data);
+      setError(null);
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data }));
+      } catch {
+        /* localStorage có thể bị chặn */
+      }
+    } catch {
+      setError("Backend chưa kết nối được, hiển thị dữ liệu gần nhất.");
+    }
+  }
+
+  useEffect(() => {
+    let stale = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/dashboard", { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as DashboardData;
+        if (stale) return;
+        setLive(data);
+        setError(null);
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data }));
+        } catch {
+          /* localStorage có thể bị chặn */
+        }
+      } catch {
+        if (!stale) {
+          setError("Backend chưa kết nối được, hiển thị dữ liệu gần nhất.");
+        }
+      }
+    }
+    void load();
+    return () => {
+      stale = true;
+    };
+  }, []);
+
+  const cultivator = live?.cultivator ?? null;
+  const boss = live?.boss ?? null;
+  const quests = live?.quests ?? [];
+  const achievements = live?.achievements ?? [];
+
+  const realm = cultivator
+    ? `${realmAt(cultivator.level)} · ${realmStage(cultivator.level)}`
+    : undefined;
+
+  return (
+    <div>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-2xl font-bold sm:text-3xl">
+            🏯 Động Phủ của{" "}
+            <span className="text-jade-gradient">{displayName}</span>
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {cultivator
+              ? `Hôm nay là ngày tu luyện thứ ${cultivator.streak} trong hành trình của bạn.`
+              : error
+                ? "Đang chờ kết nối lại với tu luyện giới..."
+                : "Đang tải thông tin tu luyện..."}
+          </p>
+        </div>
+        <CheckIn
+          name={displayName}
+          checkedIn={cultivator?.checked_in_today ?? false}
+          onSuccess={() => {
+            void refreshData();
+          }}
+        />
+      </div>
+
+      {error && live && (
+        <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-500">
+          ⚠️ {error} Dữ liệu dưới đây có thể chưa mới nhất.
+        </div>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
+          <CultivatorCard
+            name={displayName}
+            realm={realm ?? "Đang tải..."}
+            level={cultivator?.level ?? 1}
+            exp={cultivator?.exp ?? 0}
+            expToNext={cultivator?.exp_to_next ?? 1000}
+            streak={cultivator?.streak ?? 0}
+            bestStreak={cultivator?.best_streak ?? 0}
+            energy={Math.min(100, 30 + (cultivator?.streak ?? 0) * 2)}
+            avatarUrl={cultivator?.avatar_url ?? avatarUrl}
+          />
+          <section id="boss" className="scroll-mt-24">
+            <BossCard
+              boss={
+                boss
+                  ? {
+                      name: boss.name,
+                      hp: boss.hp,
+                      maxHp: boss.max_hp,
+                      weeklyDamage: boss.my_damage,
+                      reward: 5000,
+                    }
+                  : {
+                      name: "Chưa có Boss tuần",
+                      hp: 0,
+                      maxHp: 1,
+                      weeklyDamage: 0,
+                      reward: 5000,
+                    }
+              }
+            />
+          </section>
+        </div>
+        <div className="space-y-4">
+          <QuestsCard quests={quests} />
+          <AchievementsCard achievements={achievements} />
+        </div>
+      </div>
+    </div>
+  );
+}

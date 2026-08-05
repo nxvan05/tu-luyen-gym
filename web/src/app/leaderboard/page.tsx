@@ -1,8 +1,6 @@
 import { SiteHeader } from "@/components/site-header";
-import { Leaderboard } from "@/components/leaderboard";
+import { LeaderboardLive } from "@/components/leaderboard-live";
 import { getSession } from "@/lib/auth";
-import { api } from "@/lib/backend";
-import type { LeaderboardData, LeaderboardRow } from "@/lib/game";
 
 export const metadata = { title: "Bảng Xếp Hạng" };
 
@@ -10,13 +8,6 @@ export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
   const session = await getSession();
-  const res = await api<LeaderboardData>("/api/leaderboard");
-  const demo = !res.ok || !res.data;
-
-  const empty: LeaderboardRow[] = [];
-  const boards = res.data
-    ? { exp: res.data.exp, streak: res.data.streak, boss: res.data.boss }
-    : { exp: empty, streak: empty, boss: empty };
 
   return (
     <>
@@ -29,13 +20,8 @@ export default async function LeaderboardPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Thiên hạ tu luyện, đệ nhất là ai?
           </p>
-          {demo && (
-            <div className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-500">
-              ⚠️ Backend chưa kết nối được ({res.error})
-            </div>
-          )}
         </div>
-        <Leaderboard boards={boards} />
+        <LeaderboardLive />
       </main>
     </>
   );
