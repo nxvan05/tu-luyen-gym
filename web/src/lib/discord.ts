@@ -32,7 +32,6 @@ export function discordAuthorizeUrl(state: string): string {
     response_type: "code",
     scope: "identify",
     state,
-    prompt: "none",
   });
   return `https://discord.com/api/oauth2/authorize?${params.toString()}`;
 }

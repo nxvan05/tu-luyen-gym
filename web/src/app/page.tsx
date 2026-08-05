@@ -19,7 +19,9 @@ export default async function HomePage({
         ? "Phiên đăng nhập không hợp lệ, thử lại."
         : error === "auth_failed"
           ? "Đăng nhập thất bại, thử lại."
-          : null;
+          : error
+            ? `Lỗi đăng nhập: ${error} — thử lại.`
+            : null;
 
   return (
     <>
