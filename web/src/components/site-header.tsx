@@ -20,7 +20,7 @@ export function SiteHeader({ session }: { session: Session | null }) {
           <Link href="/dashboard" className="transition-colors hover:text-foreground">
             Động Phủ
           </Link>
-          <Link href="/dashboard#boss" className="transition-colors hover:text-foreground">
+          <Link href="/boss" className="transition-colors hover:text-foreground">
             Boss
           </Link>
           <Link href="/leaderboard" className="transition-colors hover:text-foreground">
