@@ -53,7 +53,7 @@ export function LeaderboardLive() {
     };
   }, [initData]);
 
-  const empty = { exp: [], streak: [], boss: [] };
+  const empty = { exp: [], streak: [], boss: [], week: [] };
 
   return (
     <div>

@@ -5,21 +5,23 @@ import { useEffect, useState } from "react";
 import { BossCard } from "@/components/dashboard/boss-card";
 import { fetchWithRetry } from "@/lib/fetch-retry";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { BossData, LeaderboardData, LeaderboardRow } from "@/lib/game";
+import type { BossData, BossHistoryData, LeaderboardData, LeaderboardRow } from "@/lib/game";
 
 const CACHE_KEY = "tlg_boss";
 
 export function BossView() {
   const [boss, setBoss] = useState<BossData | null>(null);
   const [top, setTop] = useState<LeaderboardRow[]>([]);
+  const [history, setHistory] = useState<BossHistoryData["bosses"]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let stale = false;
     async function load() {
-      const [dashRes, lbRes] = await Promise.all([
+      const [dashRes, lbRes, histRes] = await Promise.all([
         fetchWithRetry("/api/dashboard"),
         fetchWithRetry("/api/leaderboard"),
+        fetchWithRetry("/api/boss-history"),
       ]);
       if (stale) return;
       if (!lbRes) {
@@ -27,13 +29,15 @@ export function BossView() {
         return;
       }
       try {
-        const dash = dashRes
-          ? ((await dashRes.json()) as { boss: BossData | null })
-          : null;
+        const dash = dashRes ? ((await dashRes.json()) as { boss: BossData | null }) : null;
         const lb = (await lbRes.json()) as LeaderboardData;
+        const hist = histRes
+          ? ((await histRes.json()) as BossHistoryData)
+          : { bosses: [] };
         if (stale) return;
         setBoss(dash?.boss ?? null);
         setTop(lb.boss);
+        setHistory(hist.bosses);
         setError(null);
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), dash, lb }));
@@ -105,6 +109,52 @@ export function BossView() {
           ))}
         </div>
       </div>
+
+      {history.length > 0 && (
+        <div>
+          <h2 className="mb-3 font-heading text-lg font-bold">🗡️ Sử Kiện Ma Thú</h2>
+          <div className="space-y-2">
+            {history.map((h) => (
+              <div
+                key={h.season}
+                className="flex items-center gap-3 rounded-2xl border border-border bg-card/60 p-3"
+              >
+                <span className="text-2xl">{h.killed ? "💀" : "🐉"}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">
+                    Mùa {h.season}: {h.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {h.killed
+                      ? `${(h.max_hp / 1_000_000).toLocaleString("vi-VN")}M HP · đã bị hạ`
+                      : "Chưa ai hạ được"}
+                  </p>
+                </div>
+                {h.killer ? (
+                  <div className="flex items-center gap-2">
+                    <Avatar className="size-8">
+                      {h.killer.avatar_url && (
+                        <AvatarImage src={h.killer.avatar_url} alt={h.killer.name} />
+                      )}
+                      <AvatarFallback className="text-xs">
+                        {h.killer.name.slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="text-right">
+                      <p className="text-xs font-semibold">{h.killer.name}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {(h.killer.damage / 1_000_000).toLocaleString("vi-VN")}M ⚔️
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">⏳</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

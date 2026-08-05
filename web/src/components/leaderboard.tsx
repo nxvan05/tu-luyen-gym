@@ -7,12 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import type { LeaderboardRow } from "@/lib/game";
 
-type TabKey = "exp" | "streak" | "boss";
+type TabKey = "exp" | "streak" | "boss" | "week";
 
 const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: "exp", label: "Top EXP", emoji: "⚡" },
   { key: "streak", label: "Top Đạo Tâm", emoji: "🔥" },
   { key: "boss", label: "Boss Damage", emoji: "🐉" },
+  { key: "week", label: "Tuần Này", emoji: "🗓️" },
 ];
 
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -20,7 +21,8 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 function statOf(row: LeaderboardRow, tab: TabKey): string {
   if (tab === "exp") return `Lv ${row.level} · ${(row.exp ?? 0).toLocaleString("vi-VN")} EXP`;
   if (tab === "streak") return `${(row.best_streak ?? 0).toLocaleString("vi-VN")} ngày`;
-  return `${(row.damage ?? 0).toLocaleString("vi-VN")} sát thương`;
+  if (tab === "boss") return `${(row.damage ?? 0).toLocaleString("vi-VN")} sát thương`;
+  return `${(row.exp ?? 0).toLocaleString("vi-VN")} EXP tuần`;
 }
 
 export function Leaderboard({ boards }: { boards: Record<TabKey, LeaderboardRow[]> }) {

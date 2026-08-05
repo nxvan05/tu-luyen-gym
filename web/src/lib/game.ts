@@ -175,4 +175,23 @@ export interface LeaderboardData {
   exp: LeaderboardRow[];
   streak: LeaderboardRow[];
   boss: LeaderboardRow[];
+  week: LeaderboardRow[];
+}
+
+export interface BossHistoryItem {
+  season: number;
+  name: string;
+  max_hp: number;
+  killed: boolean;
+  ends_at: string | null;
+  killer: {
+    name: string;
+    username: string;
+    avatar_url: string | null;
+    damage: number;
+  } | null;
+}
+
+export interface BossHistoryData {
+  bosses: BossHistoryItem[];
 }

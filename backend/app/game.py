@@ -660,7 +660,87 @@ def leaderboard() -> dict:
         )
     ]
 
-    return {"exp": exp_board, "streak": streak_board, "boss": boss_board}
+    # EXP tuần này (thứ 2 -> hôm nay): bế quan + thiền + đọc sách
+    monday = _today_utc() - timedelta(days=_today_utc().weekday())
+    weekly: dict[str, int] = defaultdict(int)
+    for c in db.select(
+        "checkins",
+        checked_in_date=f"gte.{monday.isoformat()}",
+        select="cultivator_id,exp_gained",
+    ):
+        weekly[c["cultivator_id"]] += c["exp_gained"]
+    for table, col in (("meditations", "meditated_on"), ("reading_sessions", "session_date")):
+        try:
+            for r in db.select(
+                table,
+                **{f"{col}": f"gte.{monday.isoformat()}"},
+                select="cultivator_id,exp_gained",
+            ):
+                weekly[r["cultivator_id"]] += r["exp_gained"]
+        except Exception:
+            pass
+
+    week_ids = list(weekly.keys())
+    week_names: dict[str, dict] = {}
+    if week_ids:
+        for chunk_start in range(0, len(week_ids), 50):
+            chunk = week_ids[chunk_start : chunk_start + 50]
+            for c in db.select(
+                "cultivators",
+                id=f"in.({','.join(chunk)})",
+                select="id,username,display_name,avatar_url",
+            ):
+                week_names[c["id"]] = c
+
+    week_board = [
+        {
+            "rank": i + 1,
+            "name": (week_names[cid].get("display_name") or week_names[cid]["username"]),
+            "username": week_names[cid]["username"],
+            "avatar_url": week_names[cid].get("avatar_url"),
+            "exp": weekly[cid],
+        }
+        for i, cid in enumerate(sorted(weekly, key=weekly.get, reverse=True)[:LEADERBOARD_LIMIT])
+    ]
+
+    return {"exp": exp_board, "streak": streak_board, "boss": boss_board, "week": week_board}
+
+
+@router.get("/boss-history")
+def boss_history() -> dict:
+    """Sử kiện các Ma Thú qua các mùa — kèm kẻ hạ sát."""
+    rows = db.select("bosses", order="season.desc", limit="10")
+    history: list[dict] = []
+    for b in rows:
+        totals: dict[str, int] = defaultdict(int)
+        for r in db.select(
+            "boss_damage",
+            boss_id=f"eq.{b['id']}",
+            select="cultivator_id,damage",
+        ):
+            totals[r["cultivator_id"]] += r["damage"]
+        killer = None
+        if totals:
+            top_id = max(totals, key=totals.get)
+            top = db.select_one("cultivators", id=f"eq.{top_id}")
+            if top:
+                killer = {
+                    "name": top.get("display_name") or top["username"],
+                    "username": top["username"],
+                    "avatar_url": top.get("avatar_url"),
+                    "damage": totals[top_id],
+                }
+        history.append(
+            {
+                "season": b["season"],
+                "name": b["name"],
+                "max_hp": b["max_hp"],
+                "killed": b["hp"] <= 0,
+                "ends_at": b.get("ends_at"),
+                "killer": killer,
+            }
+        )
+    return {"bosses": history}
 
 
 def _parse_date(value: str) -> date:
