@@ -16,6 +16,7 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => null)) as {
     workout_type?: string;
+    photo?: string | null;
     photo_url?: string | null;
   } | null;
 
@@ -26,7 +27,11 @@ export async function POST(request: Request) {
   const res = await api<CheckinResult>("/api/checkin", {
     method: "POST",
     token: session.token,
-    body: { workout_type: body.workout_type, photo_url: body.photo_url ?? null },
+    body: {
+      workout_type: body.workout_type,
+      photo: body.photo ?? null,
+      photo_url: body.photo_url ?? null,
+    },
   });
 
   if (!res.ok) {

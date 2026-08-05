@@ -43,7 +43,7 @@ export function CheckIn({ name, checkedIn }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workout_type: workoutType,
-          photo_url: photo ? photo : null,
+          photo: photo,
         }),
       });
       if (!res.ok) {
@@ -62,7 +62,14 @@ export function CheckIn({ name, checkedIn }: Props) {
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPhoto(URL.createObjectURL(file));
+    if (file.size > 6 * 1024 * 1024) {
+      setError("Ảnh quá lớn (tối đa 6MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setPhoto(String(reader.result));
+    reader.onerror = () => setError("Không đọc được ảnh");
+    reader.readAsDataURL(file);
   }
 
   return (

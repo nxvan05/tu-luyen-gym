@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     # Tuần 4: Discord webhook
     discord_webhook_url: str | None = None
 
+    # C.3: Gemini AI xác nhận ảnh check-in (aistudio.google.com)
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-flash-latest"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

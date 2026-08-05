@@ -1,5 +1,6 @@
 """Logic trò chơi: check-in, EXP, streak, boss, achievements."""
 
+import base64
 from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Security
@@ -7,7 +8,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from app import db
+from app.ai import verify_gym_photo
+from app.notify import notify_checkin
 from app.security import verify_token
+from app.storage import ensure_bucket, upload_image
 
 router = APIRouter(prefix="/api", tags=["game"])
 
@@ -18,11 +22,13 @@ WORKOUT_EXP = {"push": 120, "pull": 120, "legs": 130, "cardio": 90, "rest": 40}
 # Sát thương Boss = EXP * hệ số
 BOSS_DAMAGE_PER_EXP = 100
 BOSS_SEASON = 1
+MAX_PHOTO_BYTES = 6 * 1024 * 1024
 
 
 class CheckinRequest(BaseModel):
     workout_type: str
     photo_url: str | None = None
+    photo: str | None = None  # data URL base64, ví dụ "data:image/jpeg;base64,..."
 
 
 def current_cultivator(
@@ -122,6 +128,33 @@ def _apply_achievements(cultivator: dict) -> list[dict]:
     return earned
 
 
+def _handle_photo(req: CheckinRequest, cultivator: dict) -> str | None:
+    """Xác nhận ảnh bằng AI (nếu cấu hình) rồi upload lên Storage."""
+    if not req.photo:
+        return None
+
+    header, _, b64 = req.photo.partition(",")
+    mime = (
+        header.removeprefix("data:").split(";")[0]
+        if header.startswith("data:")
+        else "image/jpeg"
+    )
+    try:
+        image_bytes = base64.b64decode(b64 or req.photo)
+    except Exception:
+        raise HTTPException(422, "Ảnh không hợp lệ (base64 sai)")
+
+    if len(image_bytes) > MAX_PHOTO_BYTES:
+        raise HTTPException(413, "Ảnh quá lớn (tối đa 6MB)")
+
+    verdict = verify_gym_photo(image_bytes, mime)
+    if not verdict.valid:
+        raise HTTPException(422, f"Ảnh không hợp lệ: {verdict.reason}")
+
+    ensure_bucket()
+    return upload_image(cultivator["id"], image_bytes, mime)
+
+
 @router.post("/checkin")
 def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator)) -> dict:
     if req.workout_type not in WORKOUT_EXP:
@@ -130,6 +163,8 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
     today = _today_utc()
     if cultivator["last_checkin_date"] and _parse_date(cultivator["last_checkin_date"]) == today:
         raise HTTPException(409, "Hôm nay đã bế quan rồi")
+
+    photo_url = _handle_photo(req, cultivator)
 
     gained = WORKOUT_EXP[req.workout_type]
     streak, best_streak = _apply_streak(cultivator, today)
@@ -140,7 +175,7 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
         {
             "cultivator_id": cultivator["id"],
             "workout_type": req.workout_type,
-            "photo_url": req.photo_url,
+            "photo_url": photo_url or req.photo_url,
             "exp_gained": gained,
             "checked_in_date": today.isoformat(),
         },
@@ -162,6 +197,13 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
     damage = gained * BOSS_DAMAGE_PER_EXP
     _apply_boss_damage(cultivator, damage, record["id"])
     achievements = _apply_achievements(cultivator)
+
+    notify_checkin(
+        name=cultivator.get("display_name") or cultivator["username"],
+        streak=streak,
+        exp=gained,
+        damage=damage,
+    )
 
     return {
         "checkin": record,
