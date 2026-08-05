@@ -57,7 +57,7 @@ export function Leaderboard({ boards }: { boards: Record<TabKey, LeaderboardRow[
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: Math.min(row.rank, 20) * 0.03 }}
-            className={`flex items-center gap-3 rounded-2xl border p-3 ${
+            className={`card-glow flex items-center gap-3 rounded-2xl border p-3 ${
               row.rank <= 3
                 ? "border-primary/40 bg-primary/5"
                 : "border-border bg-card/60"

@@ -168,6 +168,102 @@
   }
 }
 
+@keyframes rise {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+  12% {
+    opacity: var(--particle-opacity, 0.6);
+  }
+  85% {
+    opacity: var(--particle-opacity, 0.6);
+  }
+  100% {
+    transform: translateY(-105vh) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@keyframes orbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gradient-x {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes pop-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+.animate-rise {
+  animation: rise linear infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2.6s ease-in-out infinite;
+}
+
+.animate-orbit {
+  animation: orbit 16s linear infinite;
+}
+
+.animate-orbit-reverse {
+  animation: orbit 11s linear infinite reverse;
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 6s ease infinite;
+}
+
+.animate-pop-glow {
+  animation: pop-glow 2.6s ease-in-out infinite;
+}
+
+.card-glow {
+  transition:
+    border-color 0.3s,
+    box-shadow 0.3s,
+    transform 0.3s;
+}
+
+.card-glow:hover {
+  border-color: oklch(0.82 0.14 85 / 45%);
+  box-shadow:
+    0 0 0 1px oklch(0.82 0.14 85 / 18%),
+    0 14px 44px -14px oklch(0.82 0.14 85 / 40%);
+}
+
 .text-jade-gradient {
   background: linear-gradient(
     120deg,
@@ -182,6 +278,7 @@
 
 .bg-mystic-radial {
   background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, oklch(0.7 0.11 170 / 14%), transparent),
-    radial-gradient(ellipse 60% 40% at 80% 10%, oklch(0.82 0.14 85 / 10%), transparent);
+    radial-gradient(ellipse 80% 50% at 50% -10%, oklch(0.7 0.11 170 / 16%), transparent),
+    radial-gradient(ellipse 60% 40% at 85% 8%, oklch(0.82 0.14 85 / 12%), transparent),
+    radial-gradient(ellipse 70% 45% at 12% 92%, oklch(0.65 0.16 255 / 8%), transparent);
 }

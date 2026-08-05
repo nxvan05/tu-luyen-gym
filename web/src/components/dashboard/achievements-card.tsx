@@ -11,7 +11,7 @@ export function AchievementsCard({
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
 
   return (
-    <Card id="rank" className="scroll-mt-24">
+    <Card className="card-glow scroll-mt-24">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           <span>🏅 Thành tựu</span>
@@ -25,10 +25,10 @@ export function AchievementsCard({
           <div
             key={a.id}
             title={a.title}
-            className={`flex size-12 items-center justify-center rounded-xl border text-xl transition-colors ${
+            className={`flex size-12 items-center justify-center rounded-xl border text-xl transition-all ${
               a.unlocked
-                ? "border-primary/40 bg-primary/10"
-                : "border-border bg-muted/40 opacity-50 grayscale"
+                ? "animate-pop-glow border-primary/40 bg-primary/10 shadow-[0_0_14px_oklch(0.82_0.14_85/25%)] hover:scale-110 hover:-rotate-6"
+                : "border-border bg-muted/40 opacity-50 grayscale hover:opacity-70"
             }`}
           >
             {a.unlocked ? a.emoji : <Lock className="size-4 text-muted-foreground" />}

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { LingQiParticles } from "@/components/lingqi-particles";
 
 const vietnamPro = Be_Vietnam_Pro({
   variable: "--font-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`dark ${vietnamPro.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-mystic-radial">
+        <LingQiParticles />
         {children}
       </body>
     </html>

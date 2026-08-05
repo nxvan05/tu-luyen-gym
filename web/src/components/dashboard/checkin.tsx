@@ -9,6 +9,24 @@ import { WORKOUT_TYPES, type CheckinResult } from "@/lib/game";
 
 type Step = "pick" | "photo" | "verifying" | "done";
 
+const CONFETTI = Array.from({ length: 24 }, (_, i) => {
+  const angle = (i / 24) * Math.PI * 2;
+  const dist = 90 + (i % 5) * 34;
+  const colors = [
+    "oklch(0.82 0.14 85)",
+    "oklch(0.7 0.11 170)",
+    "oklch(0.75 0.16 25)",
+    "oklch(0.72 0.14 300)",
+  ];
+  return {
+    x: Math.cos(angle) * dist,
+    y: Math.sin(angle) * dist - 20,
+    r: (i % 2 ? 1 : -1) * (180 + i * 12),
+    d: 1 + (i % 6) * 0.12,
+    color: colors[i % colors.length],
+  };
+});
+
 interface Props {
   name: string;
   checkedIn: boolean;
@@ -203,7 +221,19 @@ export function CheckIn({ name, checkedIn, onSuccess }: Props) {
               )}
 
               {step === "done" && result && (
-                <div className="flex flex-col items-center py-6 text-center">
+                <div className="relative flex flex-col items-center py-6 text-center">
+                  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
+                    {CONFETTI.map((c, i) => (
+                      <motion.span
+                        key={i}
+                        initial={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 }}
+                        animate={{ opacity: 0, x: c.x, y: c.y, rotate: c.r, scale: 0.5 }}
+                        transition={{ duration: c.d, ease: "easeOut" }}
+                        className="absolute left-1/2 top-10 size-2 rounded-sm"
+                        style={{ background: c.color }}
+                      />
+                    ))}
+                  </div>
                   <motion.div
                     initial={{ scale: 0, rotate: -20 }}
                     animate={{ scale: 1, rotate: 0 }}

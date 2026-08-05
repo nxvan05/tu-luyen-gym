@@ -31,11 +31,11 @@ export function CultivatorCard({
   const expPercent = Math.round((exp / expToNext) * 100);
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="card-glow overflow-hidden">
       <CardContent className="p-5">
         <div className="flex items-start gap-4">
           <div className="relative shrink-0">
-            <div className="absolute -inset-1 rounded-full bg-primary/30 blur-md" />
+            <div className="absolute -inset-1 rounded-full bg-primary/30 blur-md animate-pop-glow" />
             <div className="relative flex size-16 items-center justify-center rounded-full border border-primary/40 bg-card text-2xl font-bold">
               {avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -48,7 +48,7 @@ export function CultivatorCard({
                 "🧘"
               )}
             </div>
-            <span className="absolute -bottom-1 -right-1 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+            <span className="absolute -bottom-1 -right-1 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground shadow-[0_0_10px_oklch(0.82_0.14_85/60%)]">
               Lv {level}
             </span>
           </div>
@@ -63,14 +63,17 @@ export function CultivatorCard({
             <div className="mt-3">
               <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <Zap className="size-3.5 text-primary" />
+                  <Zap className="size-3.5 animate-pop-glow text-primary" />
                   EXP
                 </span>
                 <span className="font-mono">
                   {exp.toLocaleString("vi-VN")} / {expToNext.toLocaleString("vi-VN")}
                 </span>
               </div>
-              <Progress value={expPercent} className="h-2" />
+              <div className="relative overflow-hidden rounded-full">
+                <Progress value={expPercent} className="h-3" />
+                <span className="animate-shimmer pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+              </div>
             </div>
           </div>
         </div>
@@ -78,7 +81,7 @@ export function CultivatorCard({
         <div className="mt-5 grid grid-cols-3 gap-3 border-t border-border/60 pt-4">
           <div>
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Flame className="size-3.5 text-primary" /> Chuỗi hiện tại
+              <Flame className="size-3.5 animate-pop-glow text-primary" /> Chuỗi hiện tại
             </p>
             <p className="mt-1 font-mono text-lg font-bold">{streak} ngày</p>
           </div>

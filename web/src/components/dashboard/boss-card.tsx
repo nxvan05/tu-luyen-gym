@@ -16,11 +16,11 @@ export function BossCard({ boss }: { boss: BossView }) {
   const hpPercent = boss.maxHp > 0 ? Math.round((boss.hp / boss.maxHp) * 100) : 0;
 
   return (
-    <Card id="boss" className="scroll-mt-24">
+    <Card className="card-glow scroll-mt-24">
       <CardContent className="p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="flex size-11 items-center justify-center rounded-xl bg-destructive/15 text-2xl">
+            <span className="animate-breath flex size-11 items-center justify-center rounded-xl bg-destructive/15 text-2xl shadow-[0_0_18px_oklch(0.7_0.19_22/40%)]">
               🐉
             </span>
             <div>
@@ -30,7 +30,10 @@ export function BossCard({ boss }: { boss: BossView }) {
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="gap-1 border-destructive/40 text-destructive">
+          <Badge
+            variant="outline"
+            className="animate-pulse gap-1 border-destructive/40 text-destructive"
+          >
             <Swords className="size-3.5" />
             Đang chiến
           </Badge>
@@ -41,10 +44,13 @@ export function BossCard({ boss }: { boss: BossView }) {
             <span>Sinh lực</span>
             <span className="font-mono">{hpPercent}%</span>
           </div>
-          <Progress value={hpPercent} className="h-3 [&>div]:bg-destructive" />
-          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-destructive/20">
+          <div className="relative overflow-hidden rounded-full">
+            <Progress value={hpPercent} className="h-3 [&>div]:bg-destructive" />
+            <span className="animate-shimmer pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          </div>
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-destructive/20">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-red-400 to-red-600"
+              className="h-full rounded-full bg-gradient-to-r from-red-400 to-red-600 transition-[width] duration-700"
               style={{ width: `${hpPercent}%` }}
             />
           </div>

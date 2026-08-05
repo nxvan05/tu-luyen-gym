@@ -6,7 +6,7 @@ import { WORKOUT_TYPES, type QuestData } from "@/lib/game";
 
 export function QuestsCard({ quests }: { quests: QuestData[] }) {
   return (
-    <Card id="quests" className="scroll-mt-24">
+    <Card className="card-glow scroll-mt-24">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">📜 Nhiệm vụ hôm nay</CardTitle>
       </CardHeader>
@@ -16,11 +16,11 @@ export function QuestsCard({ quests }: { quests: QuestData[] }) {
           return (
             <div
               key={q.id}
-              className="flex items-center gap-3 rounded-xl border border-border/70 bg-muted/40 p-3"
+              className="flex items-center gap-3 rounded-xl border border-border/70 bg-muted/40 p-3 transition-colors hover:border-primary/30 hover:bg-muted/70"
             >
               <span
-                className={`flex size-8 shrink-0 items-center justify-center rounded-lg text-base ${
-                  q.done ? "bg-accent/20" : "bg-background"
+                className={`flex size-8 shrink-0 items-center justify-center rounded-lg text-base transition-transform ${
+                  q.done ? "animate-pop-glow bg-accent/20" : "bg-background"
                 }`}
               >
                 {type?.emoji ?? "💪"}
