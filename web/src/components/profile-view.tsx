@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 import { fetchWithRetry } from "@/lib/fetch-retry";
+import { RealmScene } from "@/components/dashboard/realm-scene";
 import { BUILD_STAGES, realmAt, realmStage, type ProfileData } from "@/lib/game";
 import { avatarUrl } from "@/lib/types";
 
@@ -67,6 +68,15 @@ export function ProfileView({ username }: { username: string }) {
       >
         <ArrowLeft className="size-4" /> Bảng Tu Luyện
       </Link>
+
+      <RealmScene
+        streak={profile.streak}
+        checkedInToday={false}
+        lastCheckinDate={profile.last_checkin_date}
+        name={profile.display_name ?? profile.username}
+        level={profile.level}
+        interactive={false}
+      />
 
       <div className="card-glow rounded-2xl border bg-card p-6">
         <div className="flex items-center gap-4">

@@ -1,18 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 import { BossCard } from "@/components/dashboard/boss-card";
 import { fetchWithRetry } from "@/lib/fetch-retry";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { BossData, BossHistoryData, LeaderboardData, LeaderboardRow } from "@/lib/game";
+import type {
+  BossActivityData,
+  BossActivityItem,
+  BossData,
+  BossHistoryData,
+  LeaderboardData,
+  LeaderboardRow,
+} from "@/lib/game";
 
 const CACHE_KEY = "tlg_boss";
+
+function timeAgo(at?: string | null): string {
+  if (!at) return "";
+  const t = new Date(at).getTime();
+  if (Number.isNaN(t)) return "";
+  const diff = Math.max(0, Date.now() - t);
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return "vừa xong";
+  if (min < 60) return `${min} phút trước`;
+  return `${Math.floor(min / 60)} giờ trước`;
+}
 
 export function BossView() {
   const [boss, setBoss] = useState<BossData | null>(null);
   const [top, setTop] = useState<LeaderboardRow[]>([]);
   const [history, setHistory] = useState<BossHistoryData["bosses"]>([]);
+  const [activity, setActivity] = useState<BossActivityItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -56,6 +76,23 @@ export function BossView() {
     };
   }, []);
 
+  useEffect(() => {
+    let stale = false;
+    async function poll() {
+      const res = await fetchWithRetry("/api/boss/activity", 3, 4000);
+      if (stale || !res) return;
+      const data = (await res.json()) as BossActivityData;
+      if (stale) return;
+      setActivity(data.activity ?? []);
+    }
+    void poll();
+    const timer = setInterval(() => void poll(), 30_000);
+    return () => {
+      stale = true;
+      clearInterval(timer);
+    };
+  }, []);
+
   const bossView = boss
     ? {
         name: boss.name,
@@ -65,6 +102,9 @@ export function BossView() {
         serverDamage: boss.server_damage ?? 0,
         reward: 5000,
         endsAt: boss.ends_at,
+        killed: boss.killed,
+        killer: boss.killer,
+        season: boss.season ?? 1,
       }
     : {
         name: "Chưa có Boss tuần",
@@ -83,6 +123,45 @@ export function BossView() {
         </div>
       )}
       <BossCard boss={bossView} />
+
+      <div>
+        <h2 className="mb-3 font-heading text-lg font-bold">
+          ⚡ Chiến Trường{" "}
+          <span className="align-middle text-xs font-normal text-muted-foreground">
+            (cập nhật mỗi 30 giây)
+          </span>
+        </h2>
+        <div className="space-y-2">
+          {activity.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Chiến trường đang im ắng — Ma Thú đang chờ đòn đánh đầu tiên.
+            </p>
+          )}
+          {activity.map((a, i) => (
+            <motion.div
+              key={`${a.name}-${a.at}-${i}`}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: Math.min(i, 8) * 0.05 }}
+              className="flex items-center gap-3 rounded-xl border border-border bg-card/60 p-2.5"
+            >
+              <Avatar className="size-8">
+                {a.avatar_url && <AvatarImage src={a.avatar_url} alt={a.name} />}
+                <AvatarFallback className="text-[10px]">{a.name.slice(0, 2)}</AvatarFallback>
+              </Avatar>
+              <p className="min-w-0 flex-1 truncate text-sm">
+                <b>{a.name}</b>{" "}
+                <span className="text-muted-foreground">chém một đòn cực mạnh</span>
+              </p>
+              <span className="shrink-0 font-mono text-sm font-bold text-destructive">
+                -{(a.damage / 1000).toLocaleString("vi-VN")}K HP
+              </span>
+              <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo(a.at)}</span>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
       <div>
         <h2 className="mb-3 font-heading text-lg font-bold">
           ⚔️ Top Sát Thương Tuần

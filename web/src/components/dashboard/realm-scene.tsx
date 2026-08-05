@@ -274,9 +274,10 @@ interface Props {
   name?: string;
   level?: number;
   celebrate?: number;
+  interactive?: boolean;
 }
 
-export function RealmScene({ streak, checkedInToday, lastCheckinDate, name, level, celebrate }: Props) {
+export function RealmScene({ streak, checkedInToday, lastCheckinDate, name, level, celebrate, interactive = true }: Props) {
   const mood = moodOf(streak, checkedInToday, lastCheckinDate);
   const neglected = mood === "neglected";
 
@@ -552,74 +553,78 @@ export function RealmScene({ streak, checkedInToday, lastCheckinDate, name, leve
       </div>
 
       {/* vật phẩm tương tác */}
-      <button
-        onClick={() =>
-          interact({
-            burst: { emoji: "✨", left: 8, top: 55 },
-            text: TREE_LINES[hashDate(today()) % TREE_LINES.length],
-            emoji: "🌳",
-          })
-        }
-        title="Tưới Cây Đạo"
-        className="animate-ring absolute bottom-[30%] left-[7%] z-[6] flex size-9 items-center justify-center rounded-full border border-white/25 bg-black/45 text-base backdrop-blur-sm transition-transform active:scale-90"
-      >
-        🌳
-      </button>
-      <button
-        onClick={() =>
-          interact({
-            pose: "train",
-            burst: { emoji: "💦", left: 60, top: 55 },
-            text: STONE_LINES[hashDate(today()) % STONE_LINES.length],
-            emoji: "🪨",
-          })
-        }
-        title="Tập tạ đá"
-        className="animate-ring absolute bottom-[28%] right-[16%] z-[6] flex size-9 items-center justify-center rounded-full border border-white/25 bg-black/45 text-base backdrop-blur-sm transition-transform active:scale-90"
-      >
-        🏋️
-      </button>
-      <button
-        onClick={() =>
-          interact({
-            pose: "meditate",
-            burst: { emoji: "🪷", left: 52, top: 40 },
-            text: MAT_LINES[hashDate(today()) % MAT_LINES.length],
-            emoji: "🧘",
-          })
-        }
-        title="Ngồi thiền"
-        className="animate-ring absolute bottom-[38%] right-[30%] z-[6] flex size-9 items-center justify-center rounded-full border border-white/25 bg-black/45 text-base backdrop-blur-sm transition-transform active:scale-90"
-      >
-        🧘
-      </button>
-      <button
-        onClick={() =>
-          interact({
-            burst: { emoji: "🕯️", left: 88, top: 32 },
-            text: ALTAR_LINES[hashDate(today()) % ALTAR_LINES.length],
-            emoji: "🪔",
-          })
-        }
-        title="Dâng hương"
-        className="animate-ring absolute bottom-[52%] right-[6%] z-[6] flex size-9 items-center justify-center rounded-full border border-white/25 bg-black/45 text-base backdrop-blur-sm transition-transform active:scale-90"
-      >
-        🪔
-      </button>
-      <button
-        onClick={() => {
-          setPetHop((k) => k + 1);
-          interact({
-            burst: { emoji: "💕", left: 90, top: 70 },
-            text: PET_LINES[hashDate(today()) % PET_LINES.length],
-            emoji: pet.emoji,
-          });
-        }}
-        title="Vuốt ve linh thú"
-        className="animate-ring absolute bottom-[12%] right-[18%] z-[6] flex size-9 items-center justify-center rounded-full border border-white/25 bg-black/45 text-base backdrop-blur-sm transition-transform active:scale-90"
-      >
-        🐾
-      </button>
+      {interactive && (
+        <>
+          <button
+            onClick={() =>
+              interact({
+                burst: { emoji: "✨", left: 8, top: 55 },
+                text: TREE_LINES[hashDate(today()) % TREE_LINES.length],
+                emoji: "🌳",
+              })
+            }
+            title="Tưới Cây Đạo"
+            className="animate-ring absolute bottom-[30%] left-[7%] z-[6] flex size-9 items-center justify-center rounded-full border border-white/25 bg-black/45 text-base backdrop-blur-sm transition-transform active:scale-90"
+          >
+            🌳
+          </button>
+          <button
+            onClick={() =>
+              interact({
+                pose: "train",
+                burst: { emoji: "💦", left: 60, top: 55 },
+                text: STONE_LINES[hashDate(today()) % STONE_LINES.length],
+                emoji: "🪨",
+              })
+            }
+            title="Tập tạ đá"
+            className="animate-ring absolute bottom-[28%] right-[16%] z-[6] flex size-9 items-center justify-center rounded-full border border-white/25 bg-black/45 text-base backdrop-blur-sm transition-transform active:scale-90"
+          >
+            🏋️
+          </button>
+          <button
+            onClick={() =>
+              interact({
+                pose: "meditate",
+                burst: { emoji: "🪷", left: 52, top: 40 },
+                text: MAT_LINES[hashDate(today()) % MAT_LINES.length],
+                emoji: "🧘",
+              })
+            }
+            title="Ngồi thiền"
+            className="animate-ring absolute bottom-[38%] right-[30%] z-[6] flex size-9 items-center justify-center rounded-full border border-white/25 bg-black/45 text-base backdrop-blur-sm transition-transform active:scale-90"
+          >
+            🧘
+          </button>
+          <button
+            onClick={() =>
+              interact({
+                burst: { emoji: "🕯️", left: 88, top: 32 },
+                text: ALTAR_LINES[hashDate(today()) % ALTAR_LINES.length],
+                emoji: "🪔",
+              })
+            }
+            title="Dâng hương"
+            className="animate-ring absolute bottom-[52%] right-[6%] z-[6] flex size-9 items-center justify-center rounded-full border border-white/25 bg-black/45 text-base backdrop-blur-sm transition-transform active:scale-90"
+          >
+            🪔
+          </button>
+          <button
+            onClick={() => {
+              setPetHop((k) => k + 1);
+              interact({
+                burst: { emoji: "💕", left: 90, top: 70 },
+                text: PET_LINES[hashDate(today()) % PET_LINES.length],
+                emoji: pet.emoji,
+              });
+            }}
+            title="Vuốt ve linh thú"
+            className="animate-ring absolute bottom-[12%] right-[18%] z-[6] flex size-9 items-center justify-center rounded-full border border-white/25 bg-black/45 text-base backdrop-blur-sm transition-transform active:scale-90"
+          >
+            🐾
+          </button>
+        </>
+      )}
 
       {/* hiệu ứng bắn ra khi tương tác */}
       {bursts.map((b) => (
@@ -646,7 +651,7 @@ export function RealmScene({ streak, checkedInToday, lastCheckinDate, name, leve
         </div>
       )}
 
-      {hint && !neglected && (
+      {hint && interactive && !neglected && (
         <div className="pointer-events-none absolute left-1/2 top-1/2 z-[8] -translate-x-1/2 rounded-full border border-white/15 bg-black/50 px-3 py-1 text-[11px] text-white/80 backdrop-blur-sm">
           👆 Chạm vào các vật phẩm để tương tác
         </div>

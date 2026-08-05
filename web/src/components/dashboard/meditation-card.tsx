@@ -3,12 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
+import { haptic, playLevelChime, playRewardTing } from "@/lib/sound";
 
 const OPTIONS = [
   { minutes: 5, energy: 10, label: "Ngắn", emoji: "🪷" },
   { minutes: 10, energy: 20, label: "Vừa", emoji: "🧘" },
   { minutes: 20, energy: 40, label: "Sâu", emoji: "🔥" },
 ];
+
+const BREATH_STYLE = `
+  @keyframes tlg-breath { 0%,100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.18); opacity: 1; } }
+  .animate-breath-slow { animation: tlg-breath 8s ease-in-out infinite; }
+`;
 
 interface Props {
   onSuccess?: () => void;
@@ -37,6 +43,8 @@ export function MeditationCard({ onSuccess }: Props) {
     setResult(null);
     setPhase("timer");
     setRemaining(minutes * 60);
+    playRewardTing();
+    haptic(20);
     timerRef.current = setInterval(() => {
       setRemaining((prev) => {
         if (prev <= 1) {
@@ -75,6 +83,8 @@ export function MeditationCard({ onSuccess }: Props) {
       }
       setResult({ energy: data.energy_gained ?? 0, exp: data.exp_gained ?? 0 });
       setPhase("done");
+      playLevelChime();
+      haptic(80);
       onSuccess?.();
     } catch {
       setError("Không kết nối được backend");
@@ -129,18 +139,35 @@ export function MeditationCard({ onSuccess }: Props) {
       )}
 
       {phase === "timer" && (
-        <div className="py-2 text-center">
-          <div className="relative mx-auto mb-3 flex h-28 w-28 items-center justify-center rounded-full border-2 border-jade-400/50 bg-slate-800/60">
-            <div className="font-mono text-2xl font-bold tabular-nums">
-              {mm}:{ss}
-            </div>
-            <div className="absolute -bottom-2 rounded-full border border-jade-400/40 bg-slate-900 px-2 py-0.5 text-[10px] text-jade-300">
-              {selected} phút
+        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md">
+          <style>{BREATH_STYLE}</style>
+          <button
+            onClick={cancel}
+            className="absolute right-4 top-4 rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-xs text-white/80 transition hover:bg-white/10"
+          >
+            Hủy thiền ✕
+          </button>
+
+          <div className="animate-pop-glow mb-6 text-4xl">🪷</div>
+
+          <div className="relative flex h-56 w-56 items-center justify-center">
+            <div className="animate-breath-slow absolute inset-0 rounded-full bg-gradient-to-br from-jade-400/25 via-primary/15 to-transparent blur-md" />
+            <div className="animate-breath-slow absolute inset-4 rounded-full border border-jade-400/40 shadow-[0_0_60px_oklch(0.72_0.12_170/35%)]" />
+            <div className="relative flex flex-col items-center">
+              <span className="font-mono text-4xl font-bold tabular-nums text-white">
+                {mm}:{ss}
+              </span>
+              <span className="mt-1 text-[10px] text-jade-300">{selected} phút · linh khí tụ về</span>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {selected <= 5 ? "Hít vào thở ra đều đặn..." : "Đừng nghĩ gì cả, để linh khí chảy..."}
-          </p>
+
+          <div className="mt-6 h-6 text-sm text-muted-foreground">
+            {selected <= 5
+              ? "Hít vào... thở ra... đều đặn như sóng biển."
+              : selected <= 10
+                ? "Đừng nghĩ gì cả — để linh khí tự chảy."
+                : "Sâu hơn nữa... nội tức viên mãn, đan điền ấm dần."}
+          </div>
         </div>
       )}
 

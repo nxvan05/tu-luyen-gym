@@ -250,3 +250,15 @@ export interface BossHistoryItem {
 export interface BossHistoryData {
   bosses: BossHistoryItem[];
 }
+
+export interface BossActivityItem {
+  name: string;
+  avatar_url: string | null;
+  damage: number;
+  at?: string | null;
+}
+
+export interface BossActivityData {
+  boss: { name: string; killed: boolean } | null;
+  activity: BossActivityItem[];
+}

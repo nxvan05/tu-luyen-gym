@@ -780,6 +780,44 @@ def cultivators() -> dict:
     return {"members": members}
 
 
+@router.get("/boss/activity")
+def boss_activity() -> dict:
+    """Chiến trường: các đòn đánh gần nhất lên Ma Thú hiện tại (công khai)."""
+    boss = _ensure_boss()
+    if not boss:
+        return {"boss": None, "activity": []}
+    rows = db.select(
+        "boss_damage",
+        boss_id=f"eq.{boss['id']}",
+        order="created_at.desc",
+        limit="15",
+        select="cultivator_id,damage,created_at",
+    )
+    ids = list({r["cultivator_id"] for r in rows})
+    names: dict[str, dict] = {}
+    if ids:
+        for chunk_start in range(0, len(ids), 50):
+            chunk = ids[chunk_start : chunk_start + 50]
+            for c in db.select(
+                "cultivators",
+                id=f"in.({','.join(chunk)})",
+                select="id,username,display_name,avatar_url",
+            ):
+                names[c["id"]] = c
+    activity = [
+        {
+            "name": (names.get(r["cultivator_id"], {}).get("display_name")
+                     or names.get(r["cultivator_id"], {}).get("username")
+                     or "Ẩn sĩ"),
+            "avatar_url": names.get(r["cultivator_id"], {}).get("avatar_url"),
+            "damage": r["damage"],
+            "at": r.get("created_at"),
+        }
+        for r in rows
+    ]
+    return {"boss": {"name": boss["name"], "killed": boss["hp"] <= 0}, "activity": activity}
+
+
 @router.get("/boss-history")
 def boss_history() -> dict:
     """Sử kiện các Ma Thú qua các mùa — kèm kẻ hạ sát."""
