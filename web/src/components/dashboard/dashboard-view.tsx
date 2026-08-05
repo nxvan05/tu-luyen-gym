@@ -112,6 +112,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
         streak={cultivator?.streak ?? 0}
         checkedInToday={cultivator?.checked_in_today ?? false}
         lastCheckinDate={cultivator?.last_checkin_date ?? null}
+        name={displayName}
       />
 
       <div className="mb-6 mt-6 flex flex-wrap items-end justify-between gap-3">
