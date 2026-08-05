@@ -6,8 +6,16 @@ import { Camera, Check, Loader2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { WORKOUT_TYPES, type CheckinResult } from "@/lib/game";
+import { playLevelChime, playRareDrop, playRewardTing } from "@/lib/sound";
 
 type Step = "pick" | "photo" | "verifying" | "done";
+
+interface RewardLine {
+  emoji: string;
+  text: string;
+  highlight?: boolean;
+  rare?: boolean;
+}
 
 const CONFETTI = Array.from({ length: 24 }, (_, i) => {
   const angle = (i / 24) * Math.PI * 2;
@@ -40,6 +48,7 @@ export function CheckIn({ name, checkedIn, onSuccess }: Props) {
   const [photo, setPhoto] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CheckinResult | null>(null);
+  const [rewards, setRewards] = useState<RewardLine[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function openPanel() {
@@ -48,6 +57,7 @@ export function CheckIn({ name, checkedIn, onSuccess }: Props) {
     setPhoto(null);
     setError(null);
     setResult(null);
+    setRewards([]);
     setOpen(true);
   }
 
@@ -67,13 +77,48 @@ export function CheckIn({ name, checkedIn, onSuccess }: Props) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.error ?? "Check-in thất bại");
       }
-      setResult((await res.json()) as CheckinResult);
+      const result = (await res.json()) as CheckinResult;
+      setResult(result);
+      setRewards(buildRewards(result));
       setStep("done");
+      playLevelChime();
       onSuccess?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Lỗi không xác định");
       setStep("pick");
     }
+  }
+
+  function buildRewards(r: CheckinResult): RewardLine[] {
+    const lines: RewardLine[] = [
+      { emoji: "⚡", text: `+${r.exp_gained} EXP`, highlight: true },
+      { emoji: "🔥", text: `Đạo Tâm ${r.streak} ngày` },
+      { emoji: "🌱", text: "Cây Đạo lớn thêm một nhánh" },
+      { emoji: "🐉", text: `Boss nhận ${r.damage.toLocaleString("vi-VN")} sát thương` },
+    ];
+    if (r.artifact) {
+      lines.push({
+        emoji: r.artifact.emoji,
+        text: `Rơi Pháp Bảo: ${r.artifact.name} (${r.artifact.rarity_name})`,
+        rare: r.artifact.rarity === "thuong" || r.artifact.rarity === "tuyet",
+      });
+    }
+    if (r.freeze_used) {
+      lines.push({ emoji: "🛡️", text: "Ngọc Bảo Vệ Đạo Tâm đã kích hoạt" });
+    }
+    if (r.boss_slain) {
+      lines.push({
+        emoji: "🏅",
+        text: r.boss_slain.rank
+          ? `Ma Thú bị hạ! Xếp hạng ${r.boss_slain.rank} · +${r.boss_slain.reward} EXP`
+          : "Ma Thú đã bị hạ!",
+        highlight: true,
+      });
+    }
+    for (const a of r.new_achievements) {
+      lines.push({ emoji: a.emoji, text: `Thành tựu: ${a.title}`, highlight: true });
+    }
+    return lines;
   }
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -245,46 +290,44 @@ export function CheckIn({ name, checkedIn, onSuccess }: Props) {
                   <h3 className="mt-4 font-heading text-xl font-bold">
                     {result.leveled_up ? "Đột Phá Cảnh Giới!" : "Đột Phá Thành Công!"}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    <strong className="text-foreground">{name}</strong> đã đột phá!
-                    <br />
-                    🔥 Đạo Tâm {result.streak} ngày · +{result.exp_gained} EXP
-                    <br />
-                    🐉 Gây {result.damage.toLocaleString("vi-VN")} sát thương lên Boss
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    <strong className="text-foreground">{name}</strong> đã bế quan xong.
                   </p>
-                  {result.new_achievements.length > 0 && (
-                    <div className="mt-3 space-y-1">
-                      {result.new_achievements.map((a) => (
-                        <div
-                          key={a.id}
-                          className="rounded-xl border border-accent/40 bg-accent/10 px-4 py-1.5 text-sm text-accent"
+
+                  <div className="mt-4 w-full space-y-1.5">
+                    {rewards.map((r, i) => (
+                      <AnimatePresence key={r.text}>
+                        <motion.div
+                          initial={{ opacity: 0, x: -16, scale: 0.9 }}
+                          animate={{ opacity: 1, x: 0, scale: 1 }}
+                          transition={{
+                            delay: 0.35 + i * 0.45,
+                            type: "spring",
+                            damping: 18,
+                            stiffness: 260,
+                          }}
+                          onAnimationStart={() => {
+                            if (i === 0) playLevelChime();
+                            else if (r.rare) playRareDrop();
+                            else playRewardTing();
+                          }}
+                          className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
+                            r.highlight
+                              ? "border-amber-400/50 bg-amber-400/10 text-amber-300"
+                              : "border-slate-700/60 bg-slate-800/40 text-foreground"
+                          }`}
                         >
-                          {a.emoji} Thành tựu mới: {a.title}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {result.artifact && (
-                    <div className="animate-pop-glow mt-3 rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-2 text-sm text-amber-300">
-                      💎 Rơi Pháp Bảo: {result.artifact.emoji} <strong>{result.artifact.name}</strong>{" "}
-                      · {result.artifact.rarity_name}
-                    </div>
-                  )}
-                  {result.freeze_used && (
-                    <div className="mt-3 rounded-xl border border-sky-500/50 bg-sky-500/10 px-4 py-2 text-sm text-sky-300">
-                      🛡️ Ngọc Bảo Vệ Đạo Tâm đã kích hoạt — chuỗi không bị gãy!
-                    </div>
-                  )}
-                  {result.boss_slain && (
-                    <div className="mt-3 rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-2 text-sm text-red-300">
-                      🏅 <strong>Ma Thú đã bị hạ!</strong>
-                      {result.boss_slain.rank
-                        ? ` Đệ tử xếp hạng ${result.boss_slain.rank} nhận +${result.boss_slain.reward} EXP.`
-                        : " Boss mới đang thức tỉnh..."}
-                    </div>
-                  )}
+                          <span className={`text-lg ${r.rare ? "animate-pop-glow" : ""}`}>
+                            {r.emoji}
+                          </span>
+                          <span className="min-w-0 truncate text-left font-medium">{r.text}</span>
+                        </motion.div>
+                      </AnimatePresence>
+                    ))}
+                  </div>
+
                   <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs text-primary">
-                    📣 Webhook sẽ thông báo chiến tích lên Discord (Tuần 4)
+                    📣 Webhook sẽ thông báo chiến tích lên Discord (nếu đã cấu hình)
                   </div>
                   <Button className="mt-6 w-full" onClick={() => setOpen(false)}>
                     Về Động Phủ

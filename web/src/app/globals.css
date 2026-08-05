@@ -276,6 +276,31 @@
   animation: rise linear infinite;
 }
 
+@keyframes leaf-fall {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(var(--drift, 30px), 55px) rotate(140deg);
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(calc(var(--drift, 30px) * -0.6), 120px) rotate(300deg);
+    opacity: 0;
+  }
+}
+
+.animate-leaf {
+  animation: leaf-fall linear infinite;
+}
+
 .animate-shimmer {
   animation: shimmer 2.6s ease-in-out infinite;
 }

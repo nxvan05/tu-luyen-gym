@@ -17,6 +17,11 @@ const TABS: { key: TabKey; label: string; emoji: string }[] = [
 ];
 
 const MEDALS = ["🥇", "🥈", "🥉"];
+const TITLES: Record<number, string> = {
+  1: "Thiên Kiêu",
+  2: "Chân Truyền",
+  3: "Nội Môn",
+};
 
 function statOf(row: LeaderboardRow, tab: TabKey): string {
   if (tab === "exp") return `Lv ${row.level} · ${(row.exp ?? 0).toLocaleString("vi-VN")} EXP`;
@@ -73,7 +78,14 @@ export function Leaderboard({ boards }: { boards: Record<TabKey, LeaderboardRow[
               <AvatarFallback className="text-xs">{row.name.slice(0, 2)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{row.name}</p>
+              <p className="truncate text-sm font-semibold">
+                {row.name}
+                {row.rank <= 3 && (
+                  <span className="ml-2 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                    {TITLES[row.rank]}
+                  </span>
+                )}
+              </p>
               <p className="truncate text-xs text-muted-foreground">@{row.username}</p>
             </div>
             <Badge variant={row.rank <= 3 ? "default" : "secondary"} className="shrink-0">

@@ -78,6 +78,7 @@ export interface BossData {
   max_hp: number;
   ends_at: string | null;
   my_damage: number;
+  server_damage?: number;
 }
 
 export interface QuestData {

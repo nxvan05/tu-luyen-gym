@@ -167,6 +167,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
                       hp: boss.hp,
                       maxHp: boss.max_hp,
                       weeklyDamage: boss.my_damage,
+                      serverDamage: boss.server_damage ?? 0,
                       reward: 5000,
                       endsAt: boss.ends_at,
                     }

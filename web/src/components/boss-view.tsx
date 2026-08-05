@@ -62,10 +62,18 @@ export function BossView() {
         hp: boss.hp,
         maxHp: boss.max_hp,
         weeklyDamage: boss.my_damage,
+        serverDamage: boss.server_damage ?? 0,
         reward: 5000,
         endsAt: boss.ends_at,
       }
-    : { name: "Chưa có Boss tuần", hp: 0, maxHp: 1, weeklyDamage: 0, reward: 5000 };
+    : {
+        name: "Chưa có Boss tuần",
+        hp: 0,
+        maxHp: 1,
+        weeklyDamage: 0,
+        serverDamage: 0,
+        reward: 5000,
+      };
 
   return (
     <div className="space-y-6">
