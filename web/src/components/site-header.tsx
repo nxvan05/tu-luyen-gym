@@ -23,7 +23,7 @@ export function SiteHeader({ session }: { session: Session | null }) {
           <Link href="/dashboard#boss" className="transition-colors hover:text-foreground">
             Boss
           </Link>
-          <Link href="/dashboard#rank" className="transition-colors hover:text-foreground">
+          <Link href="/leaderboard" className="transition-colors hover:text-foreground">
             BXH
           </Link>
         </nav>

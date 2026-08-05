@@ -90,3 +90,20 @@ export interface CheckinResult {
   leveled_up: boolean;
   new_achievements: { id: string; title: string; emoji: string }[];
 }
+
+export interface LeaderboardRow {
+  rank: number;
+  name: string;
+  username: string;
+  avatar_url: string | null;
+  level?: number;
+  exp?: number;
+  best_streak?: number;
+  damage?: number;
+}
+
+export interface LeaderboardData {
+  exp: LeaderboardRow[];
+  streak: LeaderboardRow[];
+  boss: LeaderboardRow[];
+}

@@ -1,6 +1,7 @@
-"""Logic trò chơi: check-in, EXP, streak, boss, achievements."""
+"""Logic trò chơi: check-in, EXP, streak, boss, achievements, leaderboard."""
 
 import base64
+from collections import defaultdict
 from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Security
@@ -214,6 +215,83 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
         "leveled_up": leveled["level"] > cultivator["level"],
         "new_achievements": achievements,
     }
+
+
+LEADERBOARD_LIMIT = 20
+
+
+@router.get("/leaderboard")
+def leaderboard() -> dict:
+    """BXH: Top EXP (level+exp), Top Streak, Top Boss Damage."""
+
+    def public(row: dict, rank: int) -> dict:
+        return {
+            "rank": rank,
+            "name": row.get("display_name") or row["username"],
+            "username": row["username"],
+            "avatar_url": row.get("avatar_url"),
+        }
+
+    exp_rows = db.select(
+        "cultivators",
+        order="level.desc,exp.desc",
+        limit=f"{LEADERBOARD_LIMIT}",
+        select="username,display_name,avatar_url,level,exp",
+    )
+    exp_board = [
+        {**public(r, i + 1), "level": r["level"], "exp": r["exp"]}
+        for i, r in enumerate(exp_rows)
+    ]
+
+    streak_rows = db.select(
+        "cultivators",
+        order="best_streak.desc",
+        limit=f"{LEADERBOARD_LIMIT}",
+        select="username,display_name,avatar_url,best_streak",
+    )
+    streak_board = [
+        {**public(r, i + 1), "best_streak": r["best_streak"]}
+        for i, r in enumerate(streak_rows)
+    ]
+
+    # Top sát thương Boss tuần (tính tổng trong Python — đủ cho quy mô hiện tại)
+    boss = db.select_one("bosses", season=f"eq.{BOSS_SEASON}")
+    damage_totals: dict[str, int] = defaultdict(int)
+    if boss:
+        rows = db.select(
+            "boss_damage",
+            boss_id=f"eq.{boss['id']}",
+            select="cultivator_id,damage",
+        )
+        for r in rows:
+            damage_totals[r["cultivator_id"]] += r["damage"]
+
+    ids = list(damage_totals.keys())
+    cultivators: dict[str, dict] = {}
+    if ids:
+        for chunk_start in range(0, len(ids), 50):
+            chunk = ids[chunk_start : chunk_start + 50]
+            for c in db.select(
+                "cultivators",
+                id=f"in.({','.join(chunk)})",
+                select="id,username,display_name,avatar_url",
+            ):
+                cultivators[c["id"]] = c
+
+    boss_board = [
+        {
+            "rank": i + 1,
+            "name": (cultivators[cid].get("display_name") or cultivators[cid]["username"]),
+            "username": cultivators[cid]["username"],
+            "avatar_url": cultivators[cid].get("avatar_url"),
+            "damage": damage_totals[cid],
+        }
+        for i, cid in enumerate(
+            sorted(damage_totals, key=damage_totals.get, reverse=True)[:LEADERBOARD_LIMIT]
+        )
+    ]
+
+    return {"exp": exp_board, "streak": streak_board, "boss": boss_board}
 
 
 def _parse_date(value: str) -> date:
