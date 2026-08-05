@@ -29,6 +29,37 @@ export function realmStage(level: number): string {
   return REALM_STAGES[Math.min(REALM_STAGES.length - 1, Math.floor((level % 10) / 3))];
 }
 
+export const BUILD_STAGES = [
+  { at: 0, emoji: "🪨", name: "Đất Hoang" },
+  { at: 30, emoji: "🌱", name: "Linh Điền" },
+  { at: 60, emoji: "🏠", name: "Tĩnh Xá" },
+  { at: 120, emoji: "⛩️", name: "Sơn Môn" },
+  { at: 300, emoji: "🏯", name: "Tông Môn" },
+];
+
+export function realmStageName(streak: number): string {
+  let name = BUILD_STAGES[0].name;
+  for (const s of BUILD_STAGES) {
+    if (streak >= s.at) name = s.name;
+  }
+  return name;
+}
+
+export interface ProfileData {
+  display_name: string | null;
+  username: string;
+  avatar_url: string | null;
+  level: number;
+  exp: number;
+  streak: number;
+  best_streak: number;
+  last_checkin_date: string | null;
+  realm_stage: string;
+  boss_damage_total: number;
+  artifact_count: number;
+  artifacts: ArtifactData[];
+}
+
 export const WORKOUT_TYPES = [
   { key: "push", label: "Push", emoji: "🏋️" },
   { key: "pull", label: "Pull", emoji: "🧗" },

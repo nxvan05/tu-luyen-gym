@@ -70,3 +70,14 @@ export function playRareDrop() {
     /* bỏ qua */
   }
 }
+
+/** Rung nhẹ trên điện thoại (haptic) — iOS/desktop bỏ qua im lặng. */
+export function haptic(ms = 25) {
+  try {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(ms);
+    }
+  } catch {
+    /* bỏ qua */
+  }
+}

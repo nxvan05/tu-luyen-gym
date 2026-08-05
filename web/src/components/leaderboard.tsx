@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -91,6 +92,13 @@ export function Leaderboard({ boards }: { boards: Record<TabKey, LeaderboardRow[
             <Badge variant={row.rank <= 3 ? "default" : "secondary"} className="shrink-0">
               {statOf(row, tab)}
             </Badge>
+            <Link
+              href={`/thanh-vien/${encodeURIComponent(row.username)}`}
+              className="shrink-0 rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              aria-label={`Xem Động Phủ của ${row.name}`}
+            >
+              Động Phủ
+            </Link>
           </motion.div>
         ))}
       </div>

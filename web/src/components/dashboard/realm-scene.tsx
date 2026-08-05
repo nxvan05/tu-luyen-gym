@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { Flame } from "lucide-react";
 
+import { BUILD_STAGES } from "@/lib/game";
+
 type Mood = "radiant" | "flourish" | "growing" | "neglected";
 
 const QUOTES: Record<Mood, string> = {
@@ -88,15 +90,7 @@ function weatherOf(iso: string): Weather {
   return "fog";
 }
 
-/* ---------- Động Phủ lớn dần theo chuỗi ---------- */
-const BUILD_STAGES = [
-  { at: 0, emoji: "🪨", name: "Đất Hoang" },
-  { at: 30, emoji: "🌱", name: "Linh Điền" },
-  { at: 60, emoji: "🏠", name: "Tĩnh Xá" },
-  { at: 120, emoji: "⛩️", name: "Sơn Môn" },
-  { at: 300, emoji: "🏯", name: "Tông Môn" },
-];
-
+/* ---------- Động Phủ lớn dần theo chuỗi (BUILD_STAGES dùng chung từ lib/game) ---------- */
 function buildStageOf(streak: number): { emoji: string; name: string; idx: number } {
   let stage = BUILD_STAGES[0];
   let idx = 0;

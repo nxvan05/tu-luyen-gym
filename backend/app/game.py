@@ -782,6 +782,81 @@ def boss_history() -> dict:
     return {"bosses": history}
 
 
+# Động Phủ lớn dần theo chuỗi — đồng bộ với BUILD_STAGES bên web
+REALM_BUILD_STAGES = [
+    (0, "Đất Hoang"),
+    (30, "Linh Điền"),
+    (60, "Tĩnh Xá"),
+    (120, "Sơn Môn"),
+    (300, "Tông Môn"),
+]
+
+
+def _realm_stage_name(streak: int) -> str:
+    name = REALM_BUILD_STAGES[0][1]
+    for at, stage_name in REALM_BUILD_STAGES:
+        if streak >= at:
+            name = stage_name
+    return name
+
+
+@router.get("/profile/{username}")
+def profile(username: str) -> dict:
+    """Động Phủ của một tu sĩ — dữ liệu công khai để mọi người ghé thăm."""
+    c = db.select_one(
+        "cultivators",
+        username=f"eq.{username}",
+        select="id,username,display_name,avatar_url,level,exp,streak,best_streak,last_checkin_date",
+    )
+    if not c:
+        raise HTTPException(status_code=404, detail="Tu sĩ này chưa từng xuất hiện ở đây.")
+
+    try:
+        damage_rows = db.select(
+            "boss_damage",
+            cultivator_id=f"eq.{c['id']}",
+            select="damage",
+        )
+        damage_total = sum(r["damage"] for r in damage_rows)
+    except Exception:
+        damage_total = 0
+
+    artifact_rows: list[dict] = []
+    try:
+        artifact_rows = db.select(
+            "artifacts",
+            cultivator_id=f"eq.{c['id']}",
+            order="obtained_at.desc",
+            limit="6",
+        )
+    except Exception:
+        pass
+
+    return {
+        "display_name": c.get("display_name"),
+        "username": c["username"],
+        "avatar_url": c.get("avatar_url"),
+        "level": c["level"],
+        "exp": c["exp"],
+        "streak": c["streak"],
+        "best_streak": c["best_streak"],
+        "last_checkin_date": c.get("last_checkin_date"),
+        "realm_stage": _realm_stage_name(c["streak"]),
+        "boss_damage_total": damage_total,
+        "artifact_count": len(artifact_rows),
+        "artifacts": [
+            {
+                "id": a["id"],
+                "name": a["name"],
+                "rarity": a["rarity"],
+                "emoji": a["emoji"],
+                "effect": a["effect"],
+            }
+            for a in artifact_rows
+        ],
+    }
+
+
 def _parse_date(value: str) -> date:
     return date.fromisoformat(value)
 

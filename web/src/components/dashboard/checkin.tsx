@@ -6,7 +6,7 @@ import { Camera, Check, Loader2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { WORKOUT_TYPES, type CheckinResult } from "@/lib/game";
-import { playLevelChime, playRareDrop, playRewardTing } from "@/lib/sound";
+import { playLevelChime, playRareDrop, playRewardTing, haptic } from "@/lib/sound";
 
 type Step = "pick" | "photo" | "verifying" | "done";
 
@@ -310,6 +310,7 @@ export function CheckIn({ name, checkedIn, onSuccess }: Props) {
                             if (i === 0) playLevelChime();
                             else if (r.rare) playRareDrop();
                             else playRewardTing();
+                            haptic(r.highlight ? 60 : 25);
                           }}
                           className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
                             r.highlight
