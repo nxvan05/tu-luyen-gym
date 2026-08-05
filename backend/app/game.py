@@ -25,7 +25,21 @@ WORKOUT_LABELS = {
     "pull": "Luyện Thể · Kéo xà",
     "legs": "Luyện Thể · Chân",
     "cardio": "Thân Pháp · Chạy bộ",
-    "rest": "Tĩnh Dưỡng",
+    "rest": "Tĩnh Tâm",
+}
+
+# Nhánh Cây Đạo tương ứng với loại buổi tập
+PATH_BY_WORKOUT = {
+    "push": "luyen_the",
+    "pull": "luyen_the",
+    "legs": "luyen_the",
+    "cardio": "than_phap",
+    "rest": "tinh_tam",
+}
+PATH_META = {
+    "luyen_the": {"name": "Luyện Thể", "emoji": "💪"},
+    "than_phap": {"name": "Thân Pháp", "emoji": "🏃"},
+    "tinh_tam": {"name": "Tĩnh Tâm", "emoji": "🧘"},
 }
 # Sát thương Boss = EXP * hệ số
 BOSS_DAMAGE_PER_EXP = 100
@@ -70,6 +84,38 @@ def _apply_exp(cultivator: dict, gained: int) -> dict:
         level += 1
         threshold = exp_to_next(level)
     return {"level": level, "exp": exp}
+
+
+def _apply_path_exp(cultivator_id: str, workout_type: str, gained: int) -> None:
+    """Cộng EXP vào nhánh Cây Đạo tương ứng."""
+    code = PATH_BY_WORKOUT.get(workout_type)
+    if not code:
+        return
+    existing = db.select_one("dao_paths", cultivator_id=f"eq.{cultivator_id}", code=f"eq.{code}")
+    if existing:
+        db.update(
+            "dao_paths",
+            {"exp": existing["exp"] + gained},
+            cultivator_id=f"eq.{cultivator_id}",
+            code=f"eq.{code}",
+        )
+    else:
+        db.insert(
+            "dao_paths",
+            {"cultivator_id": cultivator_id, "code": code, "exp": gained},
+        )
+
+
+def path_level_and_rest(exp: int) -> tuple[int, int]:
+    """Mức nhánh từ EXP — công thức giống exp_to_next."""
+    level = 1
+    threshold = exp_to_next(level)
+    rest = exp
+    while rest >= threshold:
+        rest -= threshold
+        level += 1
+        threshold = exp_to_next(level)
+    return level, rest
 
 
 def _apply_streak(cultivator: dict, today: date) -> tuple[int, int]:
@@ -201,6 +247,8 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
     )
 
     cultivator.update({**leveled, "streak": streak, "best_streak": best_streak})
+
+    _apply_path_exp(cultivator["id"], req.workout_type, gained)
 
     damage = gained * BOSS_DAMAGE_PER_EXP
     _apply_boss_damage(cultivator, damage, record["id"])
@@ -361,12 +409,33 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
     except Exception:
         journal_rows = []
 
+    try:
+        path_rows = db.select(
+            "dao_paths",
+            cultivator_id=f"eq.{cultivator['id']}",
+        )
+    except Exception:
+        path_rows = []
+    path_exp = {p["code"]: p["exp"] for p in path_rows}
+
     return {
         "cultivator": {
             **cultivator,
             "exp_to_next": exp_to_next(cultivator["level"]),
             "checked_in_today": bool(today_checkins),
         },
+        "paths": [
+            {
+                "code": code,
+                "name": meta["name"],
+                "emoji": meta["emoji"],
+                "exp": path_exp.get(code, 0),
+                "level": path_level_and_rest(path_exp.get(code, 0))[0],
+                "exp_to_next": exp_to_next(path_level_and_rest(path_exp.get(code, 0))[0]),
+                "rest": path_level_and_rest(path_exp.get(code, 0))[1],
+            }
+            for code, meta in PATH_META.items()
+        ],
         "journal": [
             {
                 "id": j["id"],

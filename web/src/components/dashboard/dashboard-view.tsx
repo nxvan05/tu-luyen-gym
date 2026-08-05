@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { fetchWithRetry } from "@/lib/fetch-retry";
 import { CultivatorCard } from "@/components/dashboard/cultivator-card";
+import { DaoTreeCard } from "@/components/dashboard/dao-tree-card";
 import { BossCard } from "@/components/dashboard/boss-card";
 import { QuestsCard } from "@/components/dashboard/quests-card";
 import { AchievementsCard } from "@/components/dashboard/achievements-card";
@@ -93,6 +94,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
   const quests = live?.quests ?? [];
   const achievements = live?.achievements ?? [];
   const journal = live?.journal ?? [];
+  const paths = live?.paths ?? [];
 
   const realm = cultivator
     ? `${realmAt(cultivator.level)} · ${realmStage(cultivator.level)}`
@@ -148,6 +150,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
             energy={Math.min(100, 30 + (cultivator?.streak ?? 0) * 2)}
             avatarUrl={cultivator?.avatar_url ?? avatarUrl}
           />
+          <DaoTreeCard paths={paths} />
           <section id="boss" className="scroll-mt-24">
             <BossCard
               boss={

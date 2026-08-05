@@ -75,6 +75,16 @@ export interface AchievementData {
   unlocked: boolean;
 }
 
+export interface DaoPath {
+  code: string;
+  name: string;
+  emoji: string;
+  exp: number;
+  level: number;
+  exp_to_next: number;
+  rest: number;
+}
+
 export interface JournalEntry {
   id: string;
   entry_date: string;
@@ -83,6 +93,7 @@ export interface JournalEntry {
 
 export interface DashboardData {
   cultivator: CultivatorData;
+  paths: DaoPath[];
   boss: BossData | null;
   quests: QuestData[];
   achievements: AchievementData[];
