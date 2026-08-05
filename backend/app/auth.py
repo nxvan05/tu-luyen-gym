@@ -84,7 +84,7 @@ def auth_discord(req: DiscordAuthRequest) -> dict:
     token = create_token(
         str(user["id"]),
         user["username"],
-        name,
+        cultivator.get("display_name"),
         cultivator.get("avatar_url"),
     )
 
