@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { BossCard } from "@/components/dashboard/boss-card";
+import { fetchWithRetry } from "@/lib/fetch-retry";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { BossData, LeaderboardData, LeaderboardRow } from "@/lib/game";
 
@@ -16,13 +17,19 @@ export function BossView() {
   useEffect(() => {
     let stale = false;
     async function load() {
+      const [dashRes, lbRes] = await Promise.all([
+        fetchWithRetry("/api/dashboard"),
+        fetchWithRetry("/api/leaderboard"),
+      ]);
+      if (stale) return;
+      if (!lbRes) {
+        setError("Backend chưa kết nối được, hiển thị dữ liệu gần nhất.");
+        return;
+      }
       try {
-        const [dashRes, lbRes] = await Promise.all([
-          fetch("/api/dashboard", { cache: "no-store" }),
-          fetch("/api/leaderboard", { cache: "no-store" }),
-        ]);
-        if (!lbRes.ok) throw new Error("HTTP lỗi");
-        const dash = dashRes.ok ? ((await dashRes.json()) as { boss: BossData | null }) : null;
+        const dash = dashRes
+          ? ((await dashRes.json()) as { boss: BossData | null })
+          : null;
         const lb = (await lbRes.json()) as LeaderboardData;
         if (stale) return;
         setBoss(dash?.boss ?? null);
@@ -35,16 +42,6 @@ export function BossView() {
         }
       } catch {
         if (!stale) {
-          try {
-            const raw = localStorage.getItem(CACHE_KEY);
-            if (raw) {
-              const parsed = JSON.parse(raw) as { dash: { boss: BossData | null }; lb: LeaderboardData };
-              setBoss(parsed.dash.boss);
-              setTop(parsed.lb.boss);
-            }
-          } catch {
-            /* bỏ qua cache hỏng */
-          }
           setError("Backend chưa kết nối được, hiển thị dữ liệu gần nhất.");
         }
       }

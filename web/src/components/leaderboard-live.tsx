@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Leaderboard } from "@/components/leaderboard";
+import { fetchWithRetry } from "@/lib/fetch-retry";
 import type { LeaderboardData } from "@/lib/game";
 
 const CACHE_KEY = "tlg_leaderboard";
@@ -26,9 +27,13 @@ export function LeaderboardLive() {
   useEffect(() => {
     let stale = false;
     async function load() {
+      const res = await fetchWithRetry("/api/leaderboard");
+      if (stale) return;
+      if (!res) {
+        if (!initData) setError("Backend chưa kết nối được.");
+        return;
+      }
       try {
-        const res = await fetch("/api/leaderboard", { cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as LeaderboardData;
         if (stale) return;
         setBoards(data);

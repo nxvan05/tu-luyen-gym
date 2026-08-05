@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { fetchWithRetry } from "@/lib/fetch-retry";
 import { CultivatorCard } from "@/components/dashboard/cultivator-card";
 import { BossCard } from "@/components/dashboard/boss-card";
 import { QuestsCard } from "@/components/dashboard/quests-card";
@@ -33,9 +34,12 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   async function refreshData() {
+    const res = await fetchWithRetry("/api/dashboard");
+    if (!res) {
+      setError("Backend đang ngủ, hiển thị dữ liệu gần nhất.");
+      return;
+    }
     try {
-      const res = await fetch("/api/dashboard", { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as DashboardData;
       setLive(data);
       setError(null);
@@ -52,9 +56,14 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
   useEffect(() => {
     let stale = false;
     async function load() {
+      const res = await fetchWithRetry("/api/dashboard");
+      if (stale || !res) {
+        if (!stale && !res) {
+          setError("Backend đang ngủ, hiển thị dữ liệu gần nhất.");
+        }
+        return;
+      }
       try {
-        const res = await fetch("/api/dashboard", { cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as DashboardData;
         if (stale) return;
         setLive(data);
