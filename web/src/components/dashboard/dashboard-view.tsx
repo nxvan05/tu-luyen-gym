@@ -12,6 +12,7 @@ import { JournalCard } from "@/components/dashboard/journal-card";
 import { KyNgo } from "@/components/dashboard/ky-ngo";
 import { MeditationCard } from "@/components/dashboard/meditation-card";
 import { ReadingCard } from "@/components/dashboard/reading-card";
+import { SecretRealmCard } from "@/components/dashboard/secret-realm-card";
 import { RealmScene } from "@/components/dashboard/realm-scene";
 import { CheckIn } from "@/components/dashboard/checkin";
 import { realmAt, realmStage, type DashboardData } from "@/lib/game";
@@ -97,6 +98,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
   const achievements = live?.achievements ?? [];
   const journal = live?.journal ?? [];
   const paths = live?.paths ?? [];
+  const secretRealm = live?.realm ?? null;
 
   const realm = cultivator
     ? `${realmAt(cultivator.level)} · ${realmStage(cultivator.level)}`
@@ -177,6 +179,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
           </section>
         </div>
         <div className="space-y-4">
+          <SecretRealmCard realm={secretRealm} onStart={() => void refreshData()} />
           <MeditationCard onSuccess={() => void refreshData()} />
           <ReadingCard onSuccess={() => void refreshData()} />
           <KyNgo />

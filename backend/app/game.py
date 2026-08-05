@@ -73,6 +73,32 @@ ENERGY_BASE = 30
 ENERGY_PER_STREAK = 2
 ENERGY_CAP = 100
 
+# Bí Cảnh 7 ngày
+REALM_CODE = "long_huyet"
+REALM_NAME = "Long Huyệt Bí Cảnh"
+REALM_DAYS = 7
+REALM_STAGES = [
+    "Sơn Môn Cổ Quan",
+    "Thạch Trận Bát Quái",
+    "Thủy Long Đàm",
+    "Hỏa Diệm Động",
+    "Huyền Băng Cốc",
+    "Lôi Âm Điện",
+    "Long Huyệt Tàng Bảo",
+]
+REALM_FLAVOR = [
+    "Cánh cổng đá phủ rêu mở ra trước mắt đệ tử.",
+    "Đá xoay chuyển theo Bát Quái, cần tâm tỉnh để tìm lối đi.",
+    "Đáy vực vang tiếng gầm trầm — có linh thú canh giữ.",
+    "Hơi nóng cuồn cuộn, lửa ngầm cháy dưới chân.",
+    "Băng hàn thấu xương, hơi thở hóa sương mù.",
+    "Sấm chớp rạch trời, đình trận rung chuyển.",
+    "Bảo vật tỏa hào quang — chủ nhân thật sự cuối cùng cũng tới.",
+]
+REALM_DAY_EXP = 20
+REALM_COMPLETE_EXP = 500
+REALM_MAX_GAP_DAYS = 7
+
 
 def _boss_expired(boss: dict) -> bool:
     ends = boss.get("ends_at")
@@ -112,6 +138,67 @@ def _ensure_boss() -> dict | None:
     except Exception as e:
         print(f"[Boss] create failed: {e}")
         return None
+
+
+def _advance_realm(cultivator: dict) -> dict | None:
+    """Hoạt động trong ngày → tiến Bí Cảnh. Trả thông tin nếu có tiến (hoặc hoàn thành)."""
+    try:
+        realm = db.select_one(
+            "secret_realms",
+            cultivator_id=f"eq.{cultivator['id']}",
+            status="eq.active",
+            order="created_at.desc",
+            limit="1",
+        )
+    except Exception as e:
+        print(f"[Realm] query failed: {e}")
+        return None
+    if not realm:
+        return None
+
+    today = _today_utc()
+    last = realm.get("last_activity_date")
+    if last:
+        last_date = _parse_date(str(last)) if isinstance(last, str) else last
+        if last_date == today:
+            return None
+        if (today - last_date).days >= REALM_MAX_GAP_DAYS:
+            db.update(
+                "secret_realms",
+                {"status": "failed"},
+                id=f"eq.{realm['id']}",
+            )
+            return None
+
+    day = realm["current_day"] + 1
+    if day > REALM_DAYS:
+        db.update(
+            "secret_realms",
+            {
+                "status": "completed",
+                "current_day": REALM_DAYS,
+                "completed_at": datetime.now(UTC).isoformat(),
+            },
+            id=f"eq.{realm['id']}",
+        )
+        leveled = _apply_exp(cultivator, REALM_COMPLETE_EXP)
+        db.update("cultivators", leveled, id=f"eq.{cultivator['id']}")
+        cultivator.update(leveled)
+        damage = REALM_COMPLETE_EXP * BOSS_DAMAGE_PER_EXP
+        _apply_boss_damage(cultivator, damage)
+        return {
+            "completed": True,
+            "exp": REALM_COMPLETE_EXP,
+            "damage": damage,
+            "leveled_up": leveled["level"] > cultivator["level"],
+        }
+
+    db.update(
+        "secret_realms",
+        {"current_day": day, "last_activity_date": today.isoformat()},
+        id=f"eq.{realm['id']}",
+    )
+    return {"completed": False, "day": day, "stage": REALM_STAGES[day - 1]}
 
 
 class CheckinRequest(BaseModel):
@@ -321,6 +408,8 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
     _apply_boss_damage(cultivator, damage, record["id"])
     achievements = _apply_achievements(cultivator)
 
+    realm_result = _advance_realm(cultivator)
+
     notify_checkin(
         name=cultivator.get("display_name") or cultivator["username"],
         streak=streak,
@@ -356,6 +445,7 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
         "level": cultivator["level"],
         "leveled_up": leveled["level"] > cultivator["level"],
         "new_achievements": achievements,
+        "realm": realm_result,
     }
 
 
@@ -440,6 +530,36 @@ def _parse_date(value: str) -> date:
     return date.fromisoformat(value)
 
 
+@router.post("/realm/start")
+def realm_start(cultivator: dict = Depends(current_cultivator)) -> dict:
+    """Bước vào Bí Cảnh — ngày 1 bắt đầu ngay hôm nay."""
+    today = _today_utc()
+    try:
+        existing = db.select_one(
+            "secret_realms",
+            cultivator_id=f"eq.{cultivator['id']}",
+            status="eq.active",
+            order="created_at.desc",
+            limit="1",
+        )
+    except Exception:
+        raise HTTPException(502, "Bảng Bí Cảnh chưa được khởi tạo")
+    if existing:
+        raise HTTPException(409, "Đang ở trong Bí Cảnh rồi — hãy kiên trì đến ngày thứ 7")
+
+    realm = db.insert(
+        "secret_realms",
+        {
+            "cultivator_id": cultivator["id"],
+            "realm_code": REALM_CODE,
+            "start_date": today.isoformat(),
+            "current_day": 1,
+            "last_activity_date": today.isoformat(),
+        },
+    )
+    return {"realm": realm}
+
+
 class MeditateRequest(BaseModel):
     minutes: int
 
@@ -481,6 +601,8 @@ def meditate(req: MeditateRequest, cultivator: dict = Depends(current_cultivator
     _apply_boss_damage(cultivator, damage)
     _apply_achievements(cultivator)
 
+    realm_result = _advance_realm(cultivator)
+
     try:
         entry = generate_journal(
             name=cultivator.get("display_name") or cultivator["username"],
@@ -508,6 +630,7 @@ def meditate(req: MeditateRequest, cultivator: dict = Depends(current_cultivator
         "damage": damage,
         "level": cultivator["level"],
         "leveled_up": leveled["level"] > cultivator["level"],
+        "realm": realm_result,
     }
 
 
@@ -561,6 +684,8 @@ def read_session(req: ReadRequest, cultivator: dict = Depends(current_cultivator
     _apply_boss_damage(cultivator, damage)
     _apply_achievements(cultivator)
 
+    realm_result = _advance_realm(cultivator)
+
     return {
         "session_id": record["id"],
         "title": title,
@@ -569,6 +694,7 @@ def read_session(req: ReadRequest, cultivator: dict = Depends(current_cultivator
         "damage": damage,
         "level": cultivator["level"],
         "leveled_up": leveled["level"] > cultivator["level"],
+        "realm": realm_result,
     }
 
 
@@ -682,6 +808,28 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
         + (med_today["energy_gained"] if med_today else 0),
     )
 
+    realm_payload = None
+    try:
+        realm = db.select_one(
+            "secret_realms",
+            cultivator_id=f"eq.{cultivator['id']}",
+            order="created_at.desc",
+            limit="1",
+        )
+        if realm:
+            day = realm["current_day"]
+            realm_payload = {
+                "code": realm.get("realm_code", REALM_CODE),
+                "name": REALM_NAME,
+                "current_day": day,
+                "days_total": REALM_DAYS,
+                "status": realm["status"],
+                "stage": REALM_STAGES[day - 1] if realm["status"] == "active" else None,
+                "flavor": REALM_FLAVOR[day - 1] if realm["status"] == "active" else None,
+            }
+    except Exception:
+        realm_payload = None
+
     return {
         "cultivator": {
             **cultivator,
@@ -689,6 +837,7 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
             "checked_in_today": bool(today_checkins),
             "energy": energy,
         },
+        "realm": realm_payload,
         "paths": [
             {
                 "code": code,

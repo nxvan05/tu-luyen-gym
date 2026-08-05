@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 import { Flame } from "lucide-react";
 
 type Mood = "radiant" | "flourish" | "growing" | "neglected";
@@ -84,11 +86,32 @@ interface Props {
   lastCheckinDate: string | null;
 }
 
+const MOOD_RANK: Record<Mood, number> = {
+  neglected: 0,
+  growing: 1,
+  flourish: 2,
+  radiant: 3,
+};
+
 export function RealmScene({ streak, checkedInToday, lastCheckinDate }: Props) {
   const mood = moodOf(streak, checkedInToday, lastCheckinDate);
   const plant = PLANT[mood];
   const pet = PET[mood];
   const neglected = mood === "neglected";
+
+  const prevRank = useRef(MOOD_RANK[mood]);
+  const [evolving, setEvolving] = useState(false);
+
+  useEffect(() => {
+    const prev = prevRank.current;
+    const cur = MOOD_RANK[mood];
+    prevRank.current = cur;
+    if (cur > prev && cur >= 2 && !neglected) {
+      setEvolving(true);
+      const t = setTimeout(() => setEvolving(false), 2600);
+      return () => clearTimeout(t);
+    }
+  }, [mood, neglected]);
 
   return (
     <div className="relative h-44 overflow-hidden rounded-2xl border border-border/70 shadow-inner">
@@ -181,6 +204,18 @@ export function RealmScene({ streak, checkedInToday, lastCheckinDate }: Props) {
           {neglected && <span className="absolute -top-3 left-2 text-xs text-white/60">💤</span>}
         </span>
       </div>
+
+      {evolving && (
+        <div className="animate-pop-glow absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px]">
+          <div className="text-5xl">⚡</div>
+          <p className="font-heading mt-2 text-sm font-bold tracking-[0.3em] text-amber-300">
+            TIẾN HÓA
+          </p>
+          <p className="mt-1 text-xs text-white/80">
+            {pet.emoji} {pet.name}
+          </p>
+        </div>
+      )}
 
       <div className="absolute bottom-2 left-1/2 flex w-max max-w-[92%] -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/45 px-4 py-1.5 backdrop-blur-sm">
         <Flame

@@ -53,6 +53,16 @@ export interface CultivatorData {
   last_checkin_date: string | null;
 }
 
+export interface RealmData {
+  code: string;
+  name: string;
+  current_day: number;
+  days_total: number;
+  status: "active" | "completed" | "failed";
+  stage: string | null;
+  flavor: string | null;
+}
+
 export interface BossData {
   name: string;
   hp: number;
@@ -99,6 +109,7 @@ export interface DashboardData {
   quests: QuestData[];
   achievements: AchievementData[];
   journal: JournalEntry[];
+  realm: RealmData | null;
 }
 
 export interface CheckinResult {
