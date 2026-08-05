@@ -2,7 +2,7 @@
 
 import base64
 from collections import defaultdict
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -44,7 +44,58 @@ PATH_META = {
 # Sát thương Boss = EXP * hệ số
 BOSS_DAMAGE_PER_EXP = 100
 BOSS_SEASON = 1
+# Tên Boss xoay vòng theo tuần
+BOSS_NAMES = [
+    "Cửu U Ma Long",
+    "Huyền Vũ",
+    "Thao Thiết",
+    "Bạch Hổ Tinh Quân",
+    "Chu Tước Thánh Thú",
+    "Thanh Long",
+    "Cửu Vĩ Hồ Yêu",
+]
+BOSS_WEEK_DAYS = 7
 MAX_PHOTO_BYTES = 6 * 1024 * 1024
+
+
+def _boss_expired(boss: dict) -> bool:
+    ends = boss.get("ends_at")
+    if not ends:
+        return True
+    try:
+        ends_dt = datetime.fromisoformat(str(ends).replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    return ends_dt <= datetime.now(UTC)
+
+
+def _ensure_boss() -> dict | None:
+    """Boss tuần hiện tại — tự tạo Boss mới khi hết hạn hoặc chưa có."""
+    boss = db.select_one("bosses", season=f"eq.{BOSS_SEASON}")
+    if boss and not _boss_expired(boss):
+        return boss
+
+    latest = db.select_one("bosses", order="season.desc", limit="1")
+    if latest and not _boss_expired(latest):
+        return latest
+
+    next_season = (latest["season"] + 1) if latest else BOSS_SEASON
+    name = BOSS_NAMES[(next_season - 1) % len(BOSS_NAMES)]
+    hp = 10_000_000 * next_season
+    try:
+        return db.insert(
+            "bosses",
+            {
+                "name": name,
+                "season": next_season,
+                "max_hp": hp,
+                "hp": hp,
+                "ends_at": (datetime.now(UTC) + timedelta(days=BOSS_WEEK_DAYS)).isoformat(),
+            },
+        )
+    except Exception as e:
+        print(f"[Boss] create failed: {e}")
+        return None
 
 
 class CheckinRequest(BaseModel):
@@ -134,7 +185,7 @@ def _apply_streak(cultivator: dict, today: date) -> tuple[int, int]:
 
 
 def _apply_boss_damage(cultivator: dict, damage: int, checkin_id: str) -> None:
-    boss = db.select_one("bosses", season=f"eq.{BOSS_SEASON}")
+    boss = _ensure_boss()
     if not boss:
         return
     new_hp = max(0, boss["hp"] - damage)
@@ -330,7 +381,7 @@ def leaderboard() -> dict:
     ]
 
     # Top sát thương Boss tuần (tính tổng trong Python — đủ cho quy mô hiện tại)
-    boss = db.select_one("bosses", season=f"eq.{BOSS_SEASON}")
+    boss = _ensure_boss()
     damage_totals: dict[str, int] = defaultdict(int)
     if boss:
         rows = db.select(
@@ -376,7 +427,7 @@ def _parse_date(value: str) -> date:
 @router.get("/dashboard")
 def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
     today = _today_utc()
-    boss = db.select_one("bosses", season=f"eq.{BOSS_SEASON}")
+    boss = _ensure_boss()
     quests = db.select("quests", active="eq.true")
     achievements = db.select("achievements")
     unlocked_ids = {

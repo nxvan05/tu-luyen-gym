@@ -59,6 +59,7 @@ export function BossView() {
         maxHp: boss.max_hp,
         weeklyDamage: boss.my_damage,
         reward: 5000,
+        endsAt: boss.ends_at,
       }
     : { name: "Chưa có Boss tuần", hp: 0, maxHp: 1, weeklyDamage: 0, reward: 5000 };
 

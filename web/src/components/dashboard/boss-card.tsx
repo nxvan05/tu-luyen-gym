@@ -10,6 +10,18 @@ interface BossView {
   maxHp: number;
   weeklyDamage: number;
   reward: number;
+  endsAt?: string | null;
+}
+
+function timeLeft(endsAt?: string | null): string {
+  if (!endsAt) return "4 ngày 6 giờ";
+  const end = new Date(endsAt).getTime();
+  if (Number.isNaN(end)) return "4 ngày 6 giờ";
+  const diff = end - Date.now();
+  if (diff <= 0) return "Đã kết thúc — Boss mới đang đến";
+  const days = Math.floor(diff / 86_400_000);
+  const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+  return `Còn ${days} ngày ${hours} giờ`;
 }
 
 export function BossCard({ boss }: { boss: BossView }) {
@@ -25,9 +37,7 @@ export function BossCard({ boss }: { boss: BossView }) {
             </span>
             <div>
               <h3 className="font-semibold">Boss tuần: {boss.name}</h3>
-              <p className="text-xs text-muted-foreground">
-                Thời gian còn lại: 4 ngày 6 giờ
-              </p>
+              <p className="text-xs text-muted-foreground">{timeLeft(boss.endsAt)}</p>
             </div>
           </div>
           <Badge

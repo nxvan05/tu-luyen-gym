@@ -161,6 +161,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
                       maxHp: boss.max_hp,
                       weeklyDamage: boss.my_damage,
                       reward: 5000,
+                      endsAt: boss.ends_at,
                     }
                   : {
                       name: "Chưa có Boss tuần",

@@ -29,11 +29,11 @@ const PLANT: Record<Mood, { emoji: string; glow: string }> = {
   neglected: { emoji: "🌱", glow: "" },
 };
 
-const PET: Record<Mood, { emoji: string; anim: string }> = {
-  radiant: { emoji: "🐲", anim: "animate-bounce" },
-  flourish: { emoji: "🦊", anim: "animate-bounce" },
-  growing: { emoji: "🐢", anim: "animate-float" },
-  neglected: { emoji: "😴", anim: "" },
+const PET: Record<Mood, { emoji: string; anim: string; name: string }> = {
+  radiant: { emoji: "🐲", anim: "animate-bounce", name: "Huyền Long Thú" },
+  flourish: { emoji: "🦊", anim: "animate-bounce", name: "Linh Hồ Thú" },
+  growing: { emoji: "🐢", anim: "animate-float", name: "Linh Quy Sơ Khai" },
+  neglected: { emoji: "😴", anim: "", name: "Linh thú ngủ gật" },
 };
 
 const STARS = [
@@ -170,9 +170,16 @@ export function RealmScene({ streak, checkedInToday, lastCheckinDate }: Props) {
         {plant.emoji}
       </div>
 
-      <div className="absolute bottom-1 right-8 text-4xl">
-        <span className={pet.anim}>{pet.emoji}</span>
-        {neglected && <span className="absolute -top-3 left-2 text-xs text-white/60">💤</span>}
+      <div className="absolute bottom-1 right-8 text-right">
+        <div className="mb-0.5">
+          <span className="rounded-full border border-white/15 bg-black/45 px-2 py-0.5 text-[10px] text-white/80 backdrop-blur-sm">
+            🐾 {pet.name}
+          </span>
+        </div>
+        <span className="relative inline-block text-4xl">
+          <span className={pet.anim}>{pet.emoji}</span>
+          {neglected && <span className="absolute -top-3 left-2 text-xs text-white/60">💤</span>}
+        </span>
       </div>
 
       <div className="absolute bottom-2 left-1/2 flex w-max max-w-[92%] -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/45 px-4 py-1.5 backdrop-blur-sm">
