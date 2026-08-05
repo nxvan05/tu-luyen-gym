@@ -49,6 +49,7 @@ export interface CultivatorData {
   streak: number;
   best_streak: number;
   checked_in_today: boolean;
+  energy?: number;
   last_checkin_date: string | null;
 }
 

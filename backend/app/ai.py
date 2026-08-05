@@ -149,3 +149,101 @@ def generate_journal(
     if len(cleaned) < 20:
         return None
     return cleaned[:600]
+
+
+READ_EVAL_PROMPT = """Bạn là sư phụ kiểm tra tâm đắc đọc sách của đệ tử trong app tu tiên.
+
+Sách: {title}
+Đệ tử viết: {note}
+
+Nhiệm vụ:
+1. Đánh giá xem note có phải là tóm tắt/ý hiểu thật sự về sách không (không phải chữ vô nghĩa, spam, hay nhại lại đề bài).
+2. Nếu hợp lệ, ra MỘT câu hỏi khó vừa phải về ý chính trong note (đáp án nằm trong note).
+3. Lưu đáp án đúng.
+
+Trả lời DUY NHẤT một chuỗi JSON, không kèm giải thích:
+{{"valid": true|false, "reason": "lý do ngắn", "question": "câu hỏi (bỏ trống nếu không hợp lệ)", "answer": "đáp án đúng (bỏ trống nếu không hợp lệ)"}}"""
+
+
+def evaluate_reading(title: str, note: str) -> dict:
+    """Đánh giá note đọc sách + tạo câu hỏi. Trả dict valid/reason/question/answer."""
+    key = settings.gemini_api_key
+    if not key:
+        return {"valid": True, "reason": "", "question": "", "answer": ""}
+
+    prompt = READ_EVAL_PROMPT.format(title=title, note=note)
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0, "maxOutputTokens": 2000},
+    }
+
+    try:
+        with httpx.Client(timeout=30) as client:
+            res = client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{settings.gemini_model}:generateContent",
+                params={"key": key},
+                json=payload,
+            )
+            res.raise_for_status()
+            text = (
+                res.json()
+                .get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "{}")
+            )
+    except Exception as e:
+        print(f"[AI] Reading eval failed: {e}")
+        return {"valid": True, "reason": "", "question": "", "answer": ""}
+
+    try:
+        cleaned = re.sub(r"^```(json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
+        return json.loads(cleaned)
+    except Exception:
+        print(f"[AI] Cannot parse reading eval: {text[:200]}")
+        return {"valid": True, "reason": "", "question": "", "answer": ""}
+
+
+READ_CHECK_PROMPT = """Sách: {title}
+Câu hỏi: {question}
+Đáp án đúng: {answer}
+Đệ tử trả lời: {user_answer}
+
+Đánh giá câu trả lời của đệ tử so với đáp án đúng (chấp nhận diễn đạt khác nhưng đúng ý).
+
+Trả lời DUY NHẤT chuỗi JSON: {{"correct": true|false}}"""
+
+
+def check_reading_answer(title: str, question: str, answer: str, user_answer: str) -> bool:
+    key = settings.gemini_api_key
+    if not key:
+        return True
+
+    prompt = READ_CHECK_PROMPT.format(
+        title=title, question=question, answer=answer, user_answer=user_answer
+    )
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0, "maxOutputTokens": 500},
+    }
+
+    try:
+        with httpx.Client(timeout=30) as client:
+            res = client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{settings.gemini_model}:generateContent",
+                params={"key": key},
+                json=payload,
+            )
+            res.raise_for_status()
+            text = (
+                res.json()
+                .get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "{}")
+            )
+        cleaned = re.sub(r"^```(json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
+        return bool(json.loads(cleaned).get("correct"))
+    except Exception as e:
+        print(f"[AI] Reading check failed: {e}")
+        return True

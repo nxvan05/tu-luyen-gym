@@ -9,7 +9,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from app import db
-from app.ai import generate_journal, verify_gym_photo
+from app.ai import (
+    check_reading_answer,
+    evaluate_reading,
+    generate_journal,
+    verify_gym_photo,
+)
 from app.notify import notify_checkin
 from app.security import verify_token
 from app.storage import ensure_bucket, upload_image
@@ -56,6 +61,17 @@ BOSS_NAMES = [
 ]
 BOSS_WEEK_DAYS = 7
 MAX_PHOTO_BYTES = 6 * 1024 * 1024
+
+# Thiền định: phút -> Linh Khí
+MEDITATE_OPTIONS = {5: 10, 10: 20, 20: 40}
+MEDITATE_EXP = 20
+# Đọc sách: thưởng gốc + thưởng trả lời đúng câu hỏi của AI
+READ_EXP = 40
+READ_QUIZ_BONUS = 20
+# Linh Khí nền theo streak: 30 + streak*2
+ENERGY_BASE = 30
+ENERGY_PER_STREAK = 2
+ENERGY_CAP = 100
 
 
 def _boss_expired(boss: dict) -> bool:
@@ -184,7 +200,7 @@ def _apply_streak(cultivator: dict, today: date) -> tuple[int, int]:
     return streak, max(streak, cultivator["best_streak"])
 
 
-def _apply_boss_damage(cultivator: dict, damage: int, checkin_id: str) -> None:
+def _apply_boss_damage(cultivator: dict, damage: int, checkin_id: str | None = None) -> None:
     boss = _ensure_boss()
     if not boss:
         return
@@ -424,6 +440,188 @@ def _parse_date(value: str) -> date:
     return date.fromisoformat(value)
 
 
+class MeditateRequest(BaseModel):
+    minutes: int
+
+
+@router.post("/meditate")
+def meditate(req: MeditateRequest, cultivator: dict = Depends(current_cultivator)) -> dict:
+    """Thiền định: timer 5/10/20 phút -> +Linh Khí (1 lần/ngày)."""
+    if req.minutes not in MEDITATE_OPTIONS:
+        raise HTTPException(422, "Chọn 5, 10 hoặc 20 phút")
+
+    today = _today_utc()
+    if db.select_one(
+        "meditations",
+        cultivator_id=f"eq.{cultivator['id']}",
+        meditated_on=f"eq.{today.isoformat()}",
+    ):
+        raise HTTPException(409, "Hôm nay đã thiền định rồi")
+
+    energy_gained = MEDITATE_OPTIONS[req.minutes]
+    leveled = _apply_exp(cultivator, MEDITATE_EXP)
+
+    record = db.insert(
+        "meditations",
+        {
+            "cultivator_id": cultivator["id"],
+            "minutes": req.minutes,
+            "energy_gained": energy_gained,
+            "exp_gained": MEDITATE_EXP,
+            "meditated_on": today.isoformat(),
+        },
+    )
+
+    db.update("cultivators", leveled, id=f"eq.{cultivator['id']}")
+    cultivator.update(leveled)
+
+    _apply_path_exp(cultivator["id"], "rest", MEDITATE_EXP)
+
+    damage = MEDITATE_EXP * BOSS_DAMAGE_PER_EXP
+    _apply_boss_damage(cultivator, damage)
+    _apply_achievements(cultivator)
+
+    try:
+        entry = generate_journal(
+            name=cultivator.get("display_name") or cultivator["username"],
+            workout_label="Thiền Định",
+            exp=MEDITATE_EXP,
+            streak=cultivator["streak"],
+            level_text=f"Lv {cultivator['level']}",
+        )
+        if entry:
+            db.insert(
+                "journal_entries",
+                {
+                    "cultivator_id": cultivator["id"],
+                    "entry_date": today.isoformat(),
+                    "content": entry,
+                },
+            )
+    except Exception as e:
+        print(f"[Journal] meditate skip: {e}")
+
+    return {
+        "meditation": record,
+        "energy_gained": energy_gained,
+        "exp_gained": MEDITATE_EXP,
+        "damage": damage,
+        "level": cultivator["level"],
+        "leveled_up": leveled["level"] > cultivator["level"],
+    }
+
+
+class ReadRequest(BaseModel):
+    title: str
+    note: str
+
+
+@router.post("/read")
+def read_session(req: ReadRequest, cultivator: dict = Depends(current_cultivator)) -> dict:
+    """Đọc sách: nộp tựa + tóm tắt -> AI ra 1 câu hỏi; trả lời đúng được thưởng."""
+    title = req.title.strip()
+    note = req.note.strip()
+    if not title or len(title) > 120:
+        raise HTTPException(422, "Nhập tên sách (tối đa 120 ký tự)")
+    if len(note) < 30:
+        raise HTTPException(422, "Tóm tắt ít nhất 30 ký tự — sư phụ muốn thấy tâm đắc của đệ")
+    if len(note) > 2000:
+        raise HTTPException(422, "Tóm tắt tối đa 2000 ký tự")
+
+    today = _today_utc()
+    if db.select_one(
+        "reading_sessions",
+        cultivator_id=f"eq.{cultivator['id']}",
+        session_date=f"eq.{today.isoformat()}",
+    ):
+        raise HTTPException(409, "Hôm nay đã đọc sách rồi")
+
+    eval_result = evaluate_reading(title, note)
+    if not eval_result.get("valid", True):
+        raise HTTPException(422, f"Đệ tử chưa đọc thật lòng: {eval_result.get('reason', '')}")
+
+    leveled = _apply_exp(cultivator, READ_EXP)
+    record = db.insert(
+        "reading_sessions",
+        {
+            "cultivator_id": cultivator["id"],
+            "session_date": today.isoformat(),
+            "title": title,
+            "note": note,
+            "question": eval_result.get("question", ""),
+            "correct_answer": eval_result.get("answer", ""),
+            "exp_gained": READ_EXP,
+        },
+    )
+
+    db.update("cultivators", leveled, id=f"eq.{cultivator['id']}")
+    cultivator.update(leveled)
+
+    damage = READ_EXP * BOSS_DAMAGE_PER_EXP
+    _apply_boss_damage(cultivator, damage)
+    _apply_achievements(cultivator)
+
+    return {
+        "session_id": record["id"],
+        "title": title,
+        "question": eval_result.get("question", ""),
+        "exp_gained": READ_EXP,
+        "damage": damage,
+        "level": cultivator["level"],
+        "leveled_up": leveled["level"] > cultivator["level"],
+    }
+
+
+class ReadAnswerRequest(BaseModel):
+    session_id: str
+    answer: str
+
+
+@router.post("/read/answer")
+def read_answer(req: ReadAnswerRequest, cultivator: dict = Depends(current_cultivator)) -> dict:
+    session = db.select_one("reading_sessions", id=f"eq.{req.session_id}")
+    if not session or str(session["cultivator_id"]) != str(cultivator["id"]):
+        raise HTTPException(404, "Buổi đọc không tồn tại")
+    if session.get("answered"):
+        raise HTTPException(409, "Đã trả lời câu hỏi này rồi")
+
+    answer = req.answer.strip()
+    if not answer:
+        raise HTTPException(422, "Nhập câu trả lời")
+
+    correct = True
+    if session["question"]:
+        correct = check_reading_answer(
+            session["title"], session["question"], session["correct_answer"], answer
+        )
+
+    bonus = READ_QUIZ_BONUS if correct else 0
+    prev_level = cultivator["level"]
+    leveled = _apply_exp(cultivator, bonus) if bonus else {"level": cultivator["level"], "exp": cultivator["exp"]}
+
+    db.update(
+        "reading_sessions",
+        {
+            "answered": True,
+            "exp_gained": session["exp_gained"] + bonus,
+        },
+        id=f"eq.{session['id']}",
+    )
+
+    if bonus:
+        db.update("cultivators", leveled, id=f"eq.{cultivator['id']}")
+        cultivator.update(leveled)
+        _apply_boss_damage(cultivator, bonus * BOSS_DAMAGE_PER_EXP)
+
+    return {
+        "correct": correct,
+        "bonus": bonus,
+        "exp_gained": bonus,
+        "level": cultivator["level"],
+        "leveled_up": leveled["level"] > prev_level,
+    }
+
+
 @router.get("/dashboard")
 def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
     today = _today_utc()
@@ -469,11 +667,27 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
         path_rows = []
     path_exp = {p["code"]: p["exp"] for p in path_rows}
 
+    med_today = None
+    try:
+        med_today = db.select_one(
+            "meditations",
+            cultivator_id=f"eq.{cultivator['id']}",
+            meditated_on=f"eq.{today.isoformat()}",
+        )
+    except Exception:
+        med_today = None
+    energy = min(
+        ENERGY_CAP,
+        ENERGY_BASE + cultivator["streak"] * ENERGY_PER_STREAK
+        + (med_today["energy_gained"] if med_today else 0),
+    )
+
     return {
         "cultivator": {
             **cultivator,
             "exp_to_next": exp_to_next(cultivator["level"]),
             "checked_in_today": bool(today_checkins),
+            "energy": energy,
         },
         "paths": [
             {

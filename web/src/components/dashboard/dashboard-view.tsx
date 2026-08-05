@@ -10,6 +10,8 @@ import { QuestsCard } from "@/components/dashboard/quests-card";
 import { AchievementsCard } from "@/components/dashboard/achievements-card";
 import { JournalCard } from "@/components/dashboard/journal-card";
 import { KyNgo } from "@/components/dashboard/ky-ngo";
+import { MeditationCard } from "@/components/dashboard/meditation-card";
+import { ReadingCard } from "@/components/dashboard/reading-card";
 import { RealmScene } from "@/components/dashboard/realm-scene";
 import { CheckIn } from "@/components/dashboard/checkin";
 import { realmAt, realmStage, type DashboardData } from "@/lib/game";
@@ -147,7 +149,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
             expToNext={cultivator?.exp_to_next ?? 1000}
             streak={cultivator?.streak ?? 0}
             bestStreak={cultivator?.best_streak ?? 0}
-            energy={Math.min(100, 30 + (cultivator?.streak ?? 0) * 2)}
+            energy={cultivator?.energy ?? Math.min(100, 30 + (cultivator?.streak ?? 0) * 2)}
             avatarUrl={cultivator?.avatar_url ?? avatarUrl}
           />
           <DaoTreeCard paths={paths} />
@@ -175,6 +177,8 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
           </section>
         </div>
         <div className="space-y-4">
+          <MeditationCard onSuccess={() => void refreshData()} />
+          <ReadingCard onSuccess={() => void refreshData()} />
           <KyNgo />
           <QuestsCard quests={quests} />
           <AchievementsCard achievements={achievements} />
