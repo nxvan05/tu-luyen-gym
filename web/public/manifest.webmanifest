@@ -1,0 +1,11 @@
+{
+  "name": "Tu Luyện Gym",
+  "short_name": "Tu Luyện Gym",
+  "description": "Duolingo dành cho Gym — biến mỗi buổi tập thành một bước tu luyện.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0f1a",
+  "theme_color": "#0d0f1a",
+  "lang": "vi",
+  "icons": []
+}
