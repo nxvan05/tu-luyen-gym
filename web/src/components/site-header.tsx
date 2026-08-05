@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { avatarUrl } from "@/lib/types";
-import type { Session } from "@/lib/types";
+import type { Session } from "@/lib/auth";
 import { LogOutButton } from "@/components/logout-button";
 
 export function SiteHeader({ session }: { session: Session | null }) {
@@ -34,7 +34,7 @@ export function SiteHeader({ session }: { session: Session | null }) {
               <Link href="/dashboard">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={avatarUrl(session.discord, 40)}
+                  src={avatarUrl(session.discord.avatar_url, 40)}
                   alt={session.discord.global_name ?? session.discord.username}
                   width={32}
                   height={32}

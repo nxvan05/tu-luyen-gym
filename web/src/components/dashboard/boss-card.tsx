@@ -3,10 +3,17 @@ import { Swords } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import type { BossState } from "@/lib/game";
 
-export function BossCard({ boss }: { boss: BossState }) {
-  const hpPercent = Math.round((boss.hp / boss.maxHp) * 100);
+interface BossView {
+  name: string;
+  hp: number;
+  maxHp: number;
+  weeklyDamage: number;
+  reward: number;
+}
+
+export function BossCard({ boss }: { boss: BossView }) {
+  const hpPercent = boss.maxHp > 0 ? Math.round((boss.hp / boss.maxHp) * 100) : 0;
 
   return (
     <Card id="boss" className="scroll-mt-24">

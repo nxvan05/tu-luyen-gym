@@ -2,9 +2,9 @@ import { Check } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { WORKOUT_TYPES, type Quest } from "@/lib/game";
+import { WORKOUT_TYPES, type QuestData } from "@/lib/game";
 
-export function QuestsCard({ quests }: { quests: Quest[] }) {
+export function QuestsCard({ quests }: { quests: QuestData[] }) {
   return (
     <Card id="quests" className="scroll-mt-24">
       <CardHeader className="pb-3">
@@ -12,7 +12,7 @@ export function QuestsCard({ quests }: { quests: Quest[] }) {
       </CardHeader>
       <CardContent className="space-y-2">
         {quests.map((q) => {
-          const type = WORKOUT_TYPES.find((t) => t.key === q.type);
+          const type = WORKOUT_TYPES.find((t) => t.key === q.workout_type);
           return (
             <div
               key={q.id}
@@ -31,7 +31,7 @@ export function QuestsCard({ quests }: { quests: Quest[] }) {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   +{q.exp} EXP
-                  {q.type === "rest" && (
+                  {q.workout_type === "rest" && (
                     <Badge variant="outline" className="ml-2 border-accent/40 text-accent">
                       Phục hồi
                     </Badge>

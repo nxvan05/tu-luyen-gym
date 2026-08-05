@@ -40,10 +40,7 @@ export function CultivatorCard({
               {avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={avatarUrl(
-                    { id: name, username: name, global_name: null, avatar },
-                    64
-                  )}
+                  src={avatarUrl(avatar, 64)}
                   alt={name}
                   className="size-full rounded-full"
                 />

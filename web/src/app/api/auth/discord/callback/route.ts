@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { exchangeCode, fetchDiscordUser } from "@/lib/discord";
+import { backendUrl } from "@/lib/discord";
 import { setSessionCookie } from "@/lib/session";
 import { cookies } from "next/headers";
 
@@ -25,9 +25,7 @@ export async function GET(request: NextRequest) {
   cookieStore.delete("tlg_oauth_state");
 
   if (error) {
-    return NextResponse.redirect(
-      `${appUrl()}/?error=${encodeURIComponent(error)}`
-    );
+    return NextResponse.redirect(`${appUrl()}/?error=${encodeURIComponent(error)}`);
   }
 
   if (!code || !state || state !== expectedState) {
@@ -35,20 +33,20 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const accessToken = await exchangeCode(code);
-    const discordUser = await fetchDiscordUser(accessToken);
+    const res = await fetch(`${backendUrl()}/api/auth/discord`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+      cache: "no-store",
+    });
 
-    // TODO(auth): Gọi backend để tạo/tìm cultivation account + trả JWT.
-    const sessionPayload = Buffer.from(
-      JSON.stringify({
-        discord: discordUser,
-        cultivationId: `cult-${discordUser.id}`,
-        realm: 1,
-        exp: 0,
-      })
-    ).toString("base64url");
+    if (!res.ok) {
+      console.error("Backend auth failed", res.status);
+      return NextResponse.redirect(`${appUrl()}/?error=auth_failed`);
+    }
 
-    await setSessionCookie(sessionPayload);
+    const data = (await res.json()) as { token: string };
+    await setSessionCookie(data.token);
     return NextResponse.redirect(`${appUrl()}/dashboard`);
   } catch (e) {
     console.error("Discord OAuth callback failed", e);

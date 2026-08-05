@@ -1,9 +1,13 @@
 import { Lock } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Achievement } from "@/lib/game";
+import type { AchievementData } from "@/lib/game";
 
-export function AchievementsCard({ achievements }: { achievements: Achievement[] }) {
+export function AchievementsCard({
+  achievements,
+}: {
+  achievements: AchievementData[];
+}) {
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
 
   return (

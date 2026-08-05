@@ -1,0 +1,47 @@
+
+> web@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.0 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.9:3000
+- Environments: .env.local
+✓ Ready in 316ms
+✓ Running next.config.ts took 26ms
+
+ GET / 200 in 585ms (next.js: 251ms, application-code: 334ms)
+ GET / 200 in 100ms (next.js: 5ms, application-code: 94ms)
+ GET / 200 in 37ms (next.js: 3ms, application-code: 34ms)
+ GET / 200 in 73ms (next.js: 4ms, application-code: 69ms)
+ GET /api/auth/discord 307 in 420ms (next.js: 395ms, application-code: 25ms)
+ GET / 200 in 94ms (next.js: 4ms, application-code: 90ms)
+ GET / 200 in 39ms (next.js: 7ms, application-code: 32ms)
+ GET / 200 in 58ms (next.js: 29ms, application-code: 29ms)
+ GET / 200 in 50ms (next.js: 14ms, application-code: 36ms)
+ GET / 200 in 58ms (next.js: 13ms, application-code: 45ms)
+ GET / 200 in 199ms (next.js: 89ms, application-code: 110ms)
+ GET / 200 in 63ms (next.js: 4ms, application-code: 59ms)
+ GET / 200 in 72ms (next.js: 5ms, application-code: 67ms)
+ GET / 200 in 74ms (next.js: 12ms, application-code: 62ms)
+ GET / 200 in 67ms (next.js: 5ms, application-code: 62ms)
+ GET / 200 in 67ms (next.js: 7ms, application-code: 60ms)
+ GET / 200 in 65ms (next.js: 5ms, application-code: 60ms)
+ GET / 200 in 67ms (next.js: 5ms, application-code: 62ms)
+ GET / 200 in 72ms (next.js: 6ms, application-code: 65ms)
+ GET / 200 in 68ms (next.js: 5ms, application-code: 63ms)
+ GET / 200 in 62ms (next.js: 5ms, application-code: 57ms)
+ GET / 200 in 35ms (next.js: 5ms, application-code: 30ms)
+ GET / 200 in 102ms (next.js: 6ms, application-code: 96ms)
+ GET / 200 in 71ms (next.js: 4ms, application-code: 67ms)
+ GET / 200 in 72ms (next.js: 5ms, application-code: 67ms)
+ GET / 200 in 36ms (next.js: 5ms, application-code: 31ms)
+✓ Compiled in 102ms
+✓ Compiled in 80ms
+  Reload env: .env.local
+ GET / 200 in 89ms (next.js: 49ms, application-code: 40ms)
+ GET / 200 in 198ms (next.js: 2ms, application-code: 196ms)
+ GET /dashboard 200 in 2.6s (next.js: 704ms, application-code: 1927ms)
+ POST /api/checkin 200 in 2.0s (next.js: 212ms, application-code: 1807ms)
+ POST /api/checkin 409 in 252ms (next.js: 3ms, application-code: 249ms)
+ GET /dashboard 200 in 1881ms (next.js: 3ms, application-code: 1878ms)
+[?25h

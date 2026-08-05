@@ -2,24 +2,26 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 
-import type { DiscordUser } from "@/lib/types";
-
-const DISCORD_API = "https://discord.com/api";
+export interface DiscordUser {
+  id: string;
+  username: string;
+  global_name: string | null;
+  avatar: string | null;
+  discriminator?: string;
+}
 
 export function discordConfig(): {
   clientId: string;
-  clientSecret: string;
   redirectUri: string;
 } {
   const clientId = process.env.DISCORD_CLIENT_ID;
-  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
   const redirectUri = process.env.DISCORD_REDIRECT_URI;
-  if (!clientId || !clientSecret || !redirectUri) {
+  if (!clientId || !redirectUri) {
     throw new Error(
       "Thiếu cấu hình Discord OAuth. Xem .env.local.example và tạo app tại https://discord.com/developers/applications"
     );
   }
-  return { clientId, clientSecret, redirectUri };
+  return { clientId, redirectUri };
 }
 
 export function discordAuthorizeUrl(state: string): string {
@@ -32,47 +34,19 @@ export function discordAuthorizeUrl(state: string): string {
     state,
     prompt: "none",
   });
-  return `${DISCORD_API}/oauth2/authorize?${params.toString()}`;
+  return `https://discord.com/api/oauth2/authorize?${params.toString()}`;
 }
 
 export function generateState(): string {
   return randomBytes(16).toString("hex");
 }
 
-export async function exchangeCode(code: string): Promise<string> {
-  const { clientId, clientSecret, redirectUri } = discordConfig();
-  const body = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: "authorization_code",
-    code,
-    redirect_uri: redirectUri,
-  });
-
-  const res = await fetch(`${DISCORD_API}/oauth2/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    throw new Error(`Discord token exchange failed: ${res.status}`);
+export function backendUrl(): string {
+  const url = process.env.BACKEND_URL;
+  if (!url) {
+    throw new Error(
+      "Thiếu BACKEND_URL trong .env.local (ví dụ http://localhost:8000)"
+    );
   }
-
-  const data = (await res.json()) as { access_token: string };
-  return data.access_token;
-}
-
-export async function fetchDiscordUser(accessToken: string): Promise<DiscordUser> {
-  const res = await fetch(`${DISCORD_API}/users/@me`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    throw new Error(`Discord user fetch failed: ${res.status}`);
-  }
-
-  return (await res.json()) as DiscordUser;
+  return url;
 }

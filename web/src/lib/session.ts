@@ -4,11 +4,7 @@ import { cookies } from "next/headers";
 
 export const SESSION_COOKIE = "tlg_session";
 
-/**
- * TODO(auth): Session hiện tại là payload JSON base64 (chỉ để demo flow OAuth).
- * Khi backend FastAPI + Supabase xong, thay bằng JWT do backend cấp
- * và dùng middleware/proxy để verify.
- */
+/** Cookie chứa JWT do backend cấp. */
 export async function getSessionCookie(): Promise<string | null> {
   return (await cookies()).get(SESSION_COOKIE)?.value ?? null;
 }

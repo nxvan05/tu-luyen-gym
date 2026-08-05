@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # Discord OAuth — backend thực hiện trao đổi code
     discord_client_id: str = ""
     discord_client_secret: str = ""
+    discord_redirect_uri: str = "http://localhost:3000/api/auth/discord/callback"
 
     # Khóa ký JWT (chia sẻ với web/.env.local để verify)
     jwt_secret: str = "dev-secret-doi-truoc-khi-deploy"

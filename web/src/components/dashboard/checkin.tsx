@@ -1,36 +1,62 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Camera, Check, Loader2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { WORKOUT_TYPES } from "@/lib/game";
+import { WORKOUT_TYPES, type CheckinResult } from "@/lib/game";
 
 type Step = "pick" | "photo" | "verifying" | "done";
 
 interface Props {
   name: string;
-  streak: number;
   checkedIn: boolean;
 }
 
-export function CheckIn({ name, streak, checkedIn }: Props) {
+export function CheckIn({ name, checkedIn }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("pick");
+  const [workoutType, setWorkoutType] = useState<string | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
-  const [exp, setExp] = useState(120);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<CheckinResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function openPanel() {
     setStep("pick");
+    setWorkoutType(null);
     setPhoto(null);
+    setError(null);
+    setResult(null);
     setOpen(true);
   }
 
-  function startVerify() {
+  async function startVerify() {
+    setError(null);
     setStep("verifying");
-    setTimeout(() => setStep("done"), 1800);
+    try {
+      const res = await fetch("/api/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workout_type: workoutType,
+          photo_url: photo ? photo : null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Check-in thất bại");
+      }
+      setResult((await res.json()) as CheckinResult);
+      setStep("done");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Lỗi không xác định");
+      setStep("pick");
+    }
   }
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -47,7 +73,7 @@ export function CheckIn({ name, streak, checkedIn }: Props) {
         disabled={checkedIn}
         className="animate-glow-pulse text-base font-semibold"
       >
-        {checkedIn ? <Check className="mr-1.5" /> : "🧘"} 
+        {checkedIn ? <Check className="mr-1.5" /> : "🧘"}
         {checkedIn ? "Đã bế quan hôm nay" : "Bế Quan Hôm Nay"}
       </Button>
 
@@ -79,6 +105,12 @@ export function CheckIn({ name, streak, checkedIn }: Props) {
                 </button>
               </div>
 
+              {error && (
+                <div className="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+
               {step === "pick" && (
                 <div className="mt-5">
                   <p className="mb-3 text-sm text-muted-foreground">
@@ -89,9 +121,7 @@ export function CheckIn({ name, streak, checkedIn }: Props) {
                       <button
                         key={t.key}
                         onClick={() => {
-                          setExp(
-                            t.key === "cardio" ? 90 : t.key === "rest" ? 40 : 120
-                          );
+                          setWorkoutType(t.key);
                           setStep("photo");
                         }}
                         className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-muted/40 p-4 transition-all hover:border-primary/50 hover:bg-primary/10"
@@ -120,7 +150,11 @@ export function CheckIn({ name, streak, checkedIn }: Props) {
                   {photo ? (
                     <div className="relative overflow-hidden rounded-2xl border border-border">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={photo} alt="Ảnh check-in" className="h-52 w-full object-cover" />
+                      <img
+                        src={photo}
+                        alt="Ảnh check-in"
+                        className="h-52 w-full object-cover"
+                      />
                       <button
                         onClick={() => setPhoto(null)}
                         className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white backdrop-blur"
@@ -162,7 +196,7 @@ export function CheckIn({ name, streak, checkedIn }: Props) {
                 </div>
               )}
 
-              {step === "done" && (
+              {step === "done" && result && (
                 <div className="flex flex-col items-center py-6 text-center">
                   <motion.div
                     initial={{ scale: 0, rotate: -20 }}
@@ -173,15 +207,29 @@ export function CheckIn({ name, streak, checkedIn }: Props) {
                     ⚡
                   </motion.div>
                   <h3 className="mt-4 font-heading text-xl font-bold">
-                    Đột Phá Thành Công!
+                    {result.leveled_up ? "Đột Phá Cảnh Giới!" : "Đột Phá Thành Công!"}
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     <strong className="text-foreground">{name}</strong> đã đột phá!
                     <br />
-                    🔥 Chuỗi {streak + 1} ngày · +{exp} EXP
+                    🔥 Chuỗi {result.streak} ngày · +{result.exp_gained} EXP
+                    <br />
+                    🐉 Gây {result.damage.toLocaleString("vi-VN")} sát thương lên Boss
                   </p>
+                  {result.new_achievements.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {result.new_achievements.map((a) => (
+                        <div
+                          key={a.id}
+                          className="rounded-xl border border-accent/40 bg-accent/10 px-4 py-1.5 text-sm text-accent"
+                        >
+                          {a.emoji} Thành tựu mới: {a.title}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs text-primary">
-                    📣 Webhook sẽ thông báo chiến tích lên Discord
+                    📣 Webhook sẽ thông báo chiến tích lên Discord (Tuần 4)
                   </div>
                   <Button className="mt-6 w-full" onClick={() => setOpen(false)}>
                     Về Động Phủ
