@@ -81,25 +81,27 @@ export default async function DashboardPage() {
               energy={Math.min(100, 30 + (cultivator?.streak ?? 0) * 2)}
               avatarUrl={cultivator?.avatar_url ?? session.discord.avatar_url}
             />
-            <BossCard
-              boss={
-                boss
-                  ? {
-                      name: boss.name,
-                      hp: boss.hp,
-                      maxHp: boss.max_hp,
-                      weeklyDamage: boss.my_damage,
-                      reward: 5000,
-                    }
-                  : {
-                      name: "Chưa có Boss tuần",
-                      hp: 0,
-                      maxHp: 1,
-                      weeklyDamage: 0,
-                      reward: 5000,
-                    }
-              }
-            />
+            <section id="boss" className="scroll-mt-24">
+              <BossCard
+                boss={
+                  boss
+                    ? {
+                        name: boss.name,
+                        hp: boss.hp,
+                        maxHp: boss.max_hp,
+                        weeklyDamage: boss.my_damage,
+                        reward: 5000,
+                      }
+                    : {
+                        name: "Chưa có Boss tuần",
+                        hp: 0,
+                        maxHp: 1,
+                        weeklyDamage: 0,
+                        reward: 5000,
+                      }
+                }
+              />
+            </section>
           </div>
           <div className="space-y-4">
             <QuestsCard quests={quests} />
