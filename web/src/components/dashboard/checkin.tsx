@@ -264,6 +264,20 @@ export function CheckIn({ name, checkedIn, onSuccess }: Props) {
                       ))}
                     </div>
                   )}
+                  {result.artifact && (
+                    <div className="animate-pop-glow mt-3 rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-2 text-sm text-amber-300">
+                      💎 Rơi Pháp Bảo: {result.artifact.emoji} <strong>{result.artifact.name}</strong>{" "}
+                      · {result.artifact.rarity_name}
+                    </div>
+                  )}
+                  {result.boss_slain && (
+                    <div className="mt-3 rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-2 text-sm text-red-300">
+                      🏅 <strong>Ma Thú đã bị hạ!</strong>
+                      {result.boss_slain.rank
+                        ? ` Đệ tử xếp hạng ${result.boss_slain.rank} nhận +${result.boss_slain.reward} EXP.`
+                        : " Boss mới đang thức tỉnh..."}
+                    </div>
+                  )}
                   <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-xs text-primary">
                     📣 Webhook sẽ thông báo chiến tích lên Discord (Tuần 4)
                   </div>

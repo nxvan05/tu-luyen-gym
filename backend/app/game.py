@@ -1,6 +1,7 @@
 """Logic trò chơi: check-in, EXP, streak, boss, achievements, leaderboard."""
 
 import base64
+import random
 from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
 
@@ -98,6 +99,43 @@ REALM_FLAVOR = [
 REALM_DAY_EXP = 20
 REALM_COMPLETE_EXP = 500
 REALM_MAX_GAP_DAYS = 7
+
+# Pháp Bảo rơi khi bế quan
+ARTIFACT_DROP_CHANCE = 0.15
+ARTIFACT_RARITIES = [
+    {"code": "ha", "name": "Hạ Phẩm", "emoji": "🗡️", "weight": 55},
+    {"code": "trung", "name": "Trung Phẩm", "emoji": "🛡️", "weight": 30},
+    {"code": "thuong", "name": "Thượng Phẩm", "emoji": "🔮", "weight": 12},
+    {"code": "tuyet", "name": "Tuyệt Phẩm", "emoji": "👑", "weight": 3},
+]
+ARTIFACT_POOLS = {
+    "ha": [
+        ("Thanh Phong Kiếm", "Kiếm phong nhẹ tựa gió xuân lướt lá."),
+        ("Hắc Thiết Ấn", "Ấn sắt nặng tay, khắc cổ triện."),
+        ("Túi Trữ Linh", "Túi vải cũ nhưng đựng được chút linh khí."),
+        ("Đồng Tiền Quẻ", "Đồng tiền lấm lem, gieo xuống thấy hơi linh."),
+    ],
+    "trung": [
+        ("Tử Kim Trọng Hoàn", "Vòng tay tím kim, gõ nhẹ vang tiếng đạo."),
+        ("Hàn Băng Quạt", "Quạt phe phẩy ra làn hơi sương mát."),
+        ("Lôi Châu", "Viên châu rung rung, nghe tiếng sấm xa vời."),
+        ("Thanh Ngọc Bội", "Ngọc xanh ấm áp, ngăn tà khí nhẹ nhàng."),
+    ],
+    "thuong": [
+        ("Long Văn Kiếm", "Thân kiếm khắc văn rồng uốn lượn."),
+        ("Càn Khôn Đỉnh", "Chiếc đỉnh nhỏ mà chứa cả càn khôn."),
+        ("Phong Hỏa Luân", "Hai bánh xe lửa, xoay là bốc cháy."),
+        ("Phệ Linh Hồ Lô", "Hồ lô gáo vàng, hút trọn tà khí."),
+    ],
+    "tuyet": [
+        ("Hỗn Độn Chung", "Chuông cổ vang lên, trời đất ngưng đọng."),
+        ("Phi Tiên Cân", "Dải lụa bay, đạp lên là nhẹ tênh."),
+        ("Tạo Hóa Bút", "Ngòi bút chấm mực là vẽ ra đạo."),
+        ("Thái Cực Đồ", "Bức đồ xoay vần, âm dương tự nhiên."),
+    ],
+}
+# Thưởng khi Boss bị hạ — top 3 sát thương
+BOSS_SLAIN_REWARDS = {1: 1000, 2: 500, 3: 250}
 
 
 def _boss_expired(boss: dict) -> bool:
@@ -287,10 +325,93 @@ def _apply_streak(cultivator: dict, today: date) -> tuple[int, int]:
     return streak, max(streak, cultivator["best_streak"])
 
 
-def _apply_boss_damage(cultivator: dict, damage: int, checkin_id: str | None = None) -> None:
+def _roll_artifact(cultivator_id: str) -> dict | None:
+    """15% rơi Pháp Bảo ngẫu nhiên khi bế quan."""
+    if random.random() > ARTIFACT_DROP_CHANCE:
+        return None
+    rarity = random.choices(
+        ARTIFACT_RARITIES,
+        weights=[r["weight"] for r in ARTIFACT_RARITIES],
+        k=1,
+    )[0]
+    name, effect = random.choice(ARTIFACT_POOLS[rarity["code"]])
+    try:
+        row = db.insert(
+            "artifacts",
+            {
+                "cultivator_id": cultivator_id,
+                "name": name,
+                "rarity": rarity["code"],
+                "emoji": rarity["emoji"],
+                "effect": effect,
+            },
+        )
+    except Exception as e:
+        print(f"[Artifact] insert failed: {e}")
+        return None
+    return {
+        "id": row["id"],
+        "name": name,
+        "rarity": rarity["code"],
+        "rarity_name": rarity["name"],
+        "emoji": rarity["emoji"],
+        "effect": effect,
+    }
+
+
+def _on_boss_slain(boss: dict, killer: dict) -> dict:
+    """Boss vừa bị hạ: thưởng top 3 sát thương + thành tựu cho người hạ sát."""
+    totals: dict[str, int] = defaultdict(int)
+    for r in db.select(
+        "boss_damage",
+        boss_id=f"eq.{boss['id']}",
+        select="cultivator_id,damage",
+    ):
+        totals[r["cultivator_id"]] += r["damage"]
+
+    ranked = sorted(totals, key=totals.get, reverse=True)[:3]
+    killer_rank = None
+    for i, cid in enumerate(ranked):
+        gained = BOSS_SLAIN_REWARDS.get(i + 1, 0)
+        row = db.select_one("cultivators", id=f"eq.{cid}")
+        if not row:
+            continue
+        leveled = _apply_exp(row, gained)
+        db.update("cultivators", leveled, id=f"eq.{cid}")
+        if str(cid) == str(killer["id"]):
+            killer_rank = i + 1
+            killer.update(leveled)
+
+    if ranked:
+        ach = db.select_one("achievements", code="eq.boss_killer")
+        if ach and not db.select_one(
+            "user_achievements",
+            cultivator_id=f"eq.{ranked[0]}",
+            achievement_id=f"eq.{ach['id']}",
+        ):
+            db.insert(
+                "user_achievements",
+                {"cultivator_id": ranked[0], "achievement_id": ach["id"]},
+            )
+
+    db.update(
+        "bosses",
+        {"ends_at": datetime.now(UTC).isoformat()},
+        id=f"eq.{boss['id']}",
+    )
+    return {
+        "defeated": True,
+        "rank": killer_rank,
+        "reward": BOSS_SLAIN_REWARDS.get(killer_rank or 0, 0),
+    }
+
+
+def _apply_boss_damage(cultivator: dict, damage: int, checkin_id: str | None = None) -> dict | None:
     boss = _ensure_boss()
     if not boss:
-        return
+        return None
+    if boss["hp"] <= 0:
+        return None
     new_hp = max(0, boss["hp"] - damage)
     db.update("bosses", {"hp": new_hp}, id=f"eq.{boss['id']}")
     db.insert(
@@ -302,6 +423,9 @@ def _apply_boss_damage(cultivator: dict, damage: int, checkin_id: str | None = N
             "checkin_id": checkin_id,
         },
     )
+    if new_hp == 0:
+        return _on_boss_slain(boss, cultivator)
+    return None
 
 
 _ACHIEVEMENT_RULES = {
@@ -405,10 +529,11 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
     _apply_path_exp(cultivator["id"], req.workout_type, gained)
 
     damage = gained * BOSS_DAMAGE_PER_EXP
-    _apply_boss_damage(cultivator, damage, record["id"])
+    slain = _apply_boss_damage(cultivator, damage, record["id"])
     achievements = _apply_achievements(cultivator)
 
     realm_result = _advance_realm(cultivator)
+    artifact = _roll_artifact(cultivator["id"])
 
     notify_checkin(
         name=cultivator.get("display_name") or cultivator["username"],
@@ -446,6 +571,8 @@ def checkin(req: CheckinRequest, cultivator: dict = Depends(current_cultivator))
         "leveled_up": leveled["level"] > cultivator["level"],
         "new_achievements": achievements,
         "realm": realm_result,
+        "artifact": artifact,
+        "boss_slain": slain,
     }
 
 
@@ -598,7 +725,7 @@ def meditate(req: MeditateRequest, cultivator: dict = Depends(current_cultivator
     _apply_path_exp(cultivator["id"], "rest", MEDITATE_EXP)
 
     damage = MEDITATE_EXP * BOSS_DAMAGE_PER_EXP
-    _apply_boss_damage(cultivator, damage)
+    slain = _apply_boss_damage(cultivator, damage)
     _apply_achievements(cultivator)
 
     realm_result = _advance_realm(cultivator)
@@ -631,6 +758,7 @@ def meditate(req: MeditateRequest, cultivator: dict = Depends(current_cultivator
         "level": cultivator["level"],
         "leveled_up": leveled["level"] > cultivator["level"],
         "realm": realm_result,
+        "boss_slain": slain,
     }
 
 
@@ -681,7 +809,7 @@ def read_session(req: ReadRequest, cultivator: dict = Depends(current_cultivator
     cultivator.update(leveled)
 
     damage = READ_EXP * BOSS_DAMAGE_PER_EXP
-    _apply_boss_damage(cultivator, damage)
+    slain = _apply_boss_damage(cultivator, damage)
     _apply_achievements(cultivator)
 
     realm_result = _advance_realm(cultivator)
@@ -695,6 +823,7 @@ def read_session(req: ReadRequest, cultivator: dict = Depends(current_cultivator
         "level": cultivator["level"],
         "leveled_up": leveled["level"] > cultivator["level"],
         "realm": realm_result,
+        "boss_slain": slain,
     }
 
 
@@ -830,6 +959,16 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
     except Exception:
         realm_payload = None
 
+    try:
+        artifact_rows = db.select(
+            "artifacts",
+            cultivator_id=f"eq.{cultivator['id']}",
+            order="obtained_at.desc",
+            limit="12",
+        )
+    except Exception:
+        artifact_rows = []
+
     return {
         "cultivator": {
             **cultivator,
@@ -838,6 +977,16 @@ def dashboard(cultivator: dict = Depends(current_cultivator)) -> dict:
             "energy": energy,
         },
         "realm": realm_payload,
+        "artifacts": [
+            {
+                "id": a["id"],
+                "name": a["name"],
+                "rarity": a["rarity"],
+                "emoji": a["emoji"],
+                "effect": a["effect"],
+            }
+            for a in artifact_rows
+        ],
         "paths": [
             {
                 "code": code,

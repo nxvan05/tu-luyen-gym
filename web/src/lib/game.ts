@@ -63,6 +63,14 @@ export interface RealmData {
   flavor: string | null;
 }
 
+export interface ArtifactData {
+  id: string;
+  name: string;
+  rarity: string;
+  emoji: string;
+  effect: string;
+}
+
 export interface BossData {
   name: string;
   hp: number;
@@ -110,6 +118,7 @@ export interface DashboardData {
   achievements: AchievementData[];
   journal: JournalEntry[];
   realm: RealmData | null;
+  artifacts: ArtifactData[];
 }
 
 export interface CheckinResult {
@@ -119,6 +128,14 @@ export interface CheckinResult {
   level: number;
   leveled_up: boolean;
   new_achievements: { id: string; title: string; emoji: string }[];
+  artifact?: {
+    name: string;
+    rarity: string;
+    rarity_name: string;
+    emoji: string;
+    effect: string;
+  } | null;
+  boss_slain?: { defeated: boolean; rank: number | null; reward: number } | null;
 }
 
 export interface LeaderboardRow {

@@ -13,6 +13,7 @@ import { KyNgo } from "@/components/dashboard/ky-ngo";
 import { MeditationCard } from "@/components/dashboard/meditation-card";
 import { ReadingCard } from "@/components/dashboard/reading-card";
 import { SecretRealmCard } from "@/components/dashboard/secret-realm-card";
+import { ArtifactsCard } from "@/components/dashboard/artifacts-card";
 import { RealmScene } from "@/components/dashboard/realm-scene";
 import { CheckIn } from "@/components/dashboard/checkin";
 import { realmAt, realmStage, type DashboardData } from "@/lib/game";
@@ -99,6 +100,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
   const journal = live?.journal ?? [];
   const paths = live?.paths ?? [];
   const secretRealm = live?.realm ?? null;
+  const artifacts = live?.artifacts ?? [];
 
   const realm = cultivator
     ? `${realmAt(cultivator.level)} · ${realmStage(cultivator.level)}`
@@ -182,6 +184,7 @@ export function DashboardView({ displayName, avatarUrl }: Props) {
           <SecretRealmCard realm={secretRealm} onStart={() => void refreshData()} />
           <MeditationCard onSuccess={() => void refreshData()} />
           <ReadingCard onSuccess={() => void refreshData()} />
+          <ArtifactsCard artifacts={artifacts} />
           <KyNgo />
           <QuestsCard quests={quests} />
           <AchievementsCard achievements={achievements} />
