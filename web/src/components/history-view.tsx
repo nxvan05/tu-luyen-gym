@@ -20,8 +20,16 @@ export function HistoryView() {
         if (!stale) setError("Backend đang ngủ, thử lại sau.");
         return;
       }
+      if (!res.ok) {
+        if (!stale) setError("Chưa đăng nhập hoặc phiên hết hạn — bấm Bắt Đầu Tu Luyện.");
+        return;
+      }
       try {
         const data = (await res.json()) as HistoryData;
+        if (!data || !Array.isArray(data.activities) || !Array.isArray(data.week)) {
+          if (!stale) setError("Dữ liệu không hợp lệ, thử lại sau.");
+          return;
+        }
         if (!stale) {
           setData(data);
           setError(null);
